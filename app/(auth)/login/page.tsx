@@ -12,7 +12,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    searchParams.get("error") === "verification_failed"
+      ? "That verification link is invalid or expired. Please sign up again or request a new one."
+      : null
+  );
+  const justVerified = searchParams.get("verified") === "1";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,6 +58,12 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center px-6 py-12">
       <h1 className="font-serif text-3xl text-[#2D5A27]">Welcome back</h1>
       <p className="mt-2 text-sm text-stone-600">Log in to view your stamp card.</p>
+
+      {justVerified && (
+        <p className="mt-4 rounded-xl bg-[#2D5A27]/10 px-4 py-3 text-sm text-[#2D5A27]">
+          Email verified — you can now log in.
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm text-stone-700">
