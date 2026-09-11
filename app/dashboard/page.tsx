@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { createClient } from "@/lib/supabase/client";
 import LoyaltyCard from "@/components/LoyaltyCard";
+import Toast, { type ToastData } from "@/components/Toast";
 
 type LoyaltyCardRow = {
   id: string;
@@ -35,6 +36,15 @@ export default function DashboardPage() {
   const [logs, setLogs] = useState<StampLog[]>([]);
   const [orders, setOrders] = useState<OrderHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<ToastData | null>(null);
+  const prevCardRef = useRef<LoyaltyCardRow | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function fireToast(message: string, emoji: string) {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ id: Date.now(), message, emoji });
+    toastTimerRef.current = setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -60,6 +70,7 @@ export default function DashboardPage() {
         .eq("user_id", user.id)
         .single();
       setCard(cardRow);
+      prevCardRef.current = cardRow ?? null;
 
       const { data: orderRows } = await supabase
         .from("orders")
@@ -104,7 +115,19 @@ export default function DashboardPage() {
               table: "loyalty_cards",
               filter: `id=eq.${cardRow.id}`,
             },
-            (payload) => setCard(payload.new as LoyaltyCardRow)
+            (payload) => {
+              const updated = payload.new as LoyaltyCardRow;
+              const prev = prevCardRef.current;
+              if (prev) {
+                if (updated.total_earned_rewards > prev.total_earned_rewards) {
+                  fireToast("Reward redeemed — enjoy your free drink!", "🎉");
+                } else if (updated.stamp_count > prev.stamp_count) {
+                  fireToast("You've received a stamp!", "☕");
+                }
+              }
+              prevCardRef.current = updated;
+              setCard(updated);
+            }
           )
           .on(
             "postgres_changes",
@@ -126,6 +149,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
       if (channel) supabase.removeChannel(channel);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, [supabase]);
 
@@ -143,6 +167,7 @@ export default function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-14">
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
       <h1 className="font-serif text-3xl text-[#2D5A27]">Hi, {fullName || "there"}</h1>
       <p className="mt-1 text-sm text-stone-600">
         Show your QR code at the counter to earn a stamp with every qualifying order.

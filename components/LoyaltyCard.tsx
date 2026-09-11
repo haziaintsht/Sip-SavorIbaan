@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 
 const TOTAL_SLOTS = 10;
 
@@ -11,6 +14,19 @@ const SOCIALS = [
 export default function LoyaltyCard({ stampCount }: { stampCount: number }) {
   const slots = Array.from({ length: TOTAL_SLOTS }, (_, i) => i < stampCount);
   const remaining = TOTAL_SLOTS - stampCount;
+
+  const [pulseIndex, setPulseIndex] = useState<number | null>(null);
+  const prevCount = useRef(stampCount);
+
+  useEffect(() => {
+    if (stampCount > prevCount.current) {
+      setPulseIndex(stampCount - 1);
+      const t = setTimeout(() => setPulseIndex(null), 700);
+      prevCount.current = stampCount;
+      return () => clearTimeout(t);
+    }
+    prevCount.current = stampCount;
+  }, [stampCount]);
 
   return (
     <div className="overflow-hidden rounded-3xl border border-[#2D5A27]/15 bg-[#F3E9D3] shadow-sm">
@@ -49,7 +65,7 @@ export default function LoyaltyCard({ stampCount }: { stampCount: number }) {
                 filled
                   ? "border-[#2D5A27] bg-[#2D5A27] text-[#F9F6F0]"
                   : "border-dashed border-[#8a6d4a]/40 text-[#8a6d4a]/50"
-              }`}
+              } ${i === pulseIndex ? "animate-stamp-pop" : ""}`}
             >
               {filled ? "☕" : i + 1}
             </div>
