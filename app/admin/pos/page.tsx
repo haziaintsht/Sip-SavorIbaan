@@ -129,6 +129,7 @@ export default function AdminPOSPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [wifiSsid, setWifiSsid] = useState<string | null>(null);
   const [wifiPassword, setWifiPassword] = useState<string | null>(null);
 
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
@@ -156,10 +157,13 @@ export default function AdminPOSPage() {
   useEffect(() => {
     supabase
       .from("branch_info")
-      .select("wifi_password")
+      .select("wifi_ssid, wifi_password")
       .eq("branch", branch)
       .maybeSingle()
-      .then(({ data }) => setWifiPassword(data?.wifi_password ?? null));
+      .then(({ data }) => {
+        setWifiSsid(data?.wifi_ssid ?? null);
+        setWifiPassword(data?.wifi_password ?? null);
+      });
   }, [supabase, branch]);
 
   async function loadRecentOrders(b: Branch) {
@@ -430,6 +434,7 @@ export default function AdminPOSPage() {
       changeDue: paymentMethod === "Cash" && cashReceivedNum > 0 ? changeDue : null,
       discountReason: discountAmount > 0 ? discountReason || null : null,
       discountNote: discountAmount > 0 ? discountNote.trim() || null : null,
+      wifiSsid,
       wifiPassword,
     });
 
@@ -475,6 +480,7 @@ export default function AdminPOSPage() {
       changeDue: null,
       discountReason: null,
       discountNote: null,
+      wifiSsid,
       wifiPassword,
     });
   }

@@ -17,6 +17,7 @@ export type ReceiptData = {
   changeDue?: number | null;
   discountReason?: string | null;
   discountNote?: string | null;
+  wifiSsid?: string | null;
   wifiPassword?: string | null;
 };
 
@@ -73,12 +74,13 @@ export default function Receipt({ data }: { data: ReceiptData }) {
         </div>
       )}
       {data.customerName && <p>Customer: {data.customerName}</p>}
-      {data.wifiPassword && (
+      {(data.wifiSsid || data.wifiPassword) && (
         <>
           <div className="my-2 border-t border-dashed border-black" />
           <p className="flex items-center justify-center gap-1 text-center">
-            <Wifi className="h-3 w-3" strokeWidth={2.25} /> WiFi: {data.wifiPassword}
+            <Wifi className="h-3 w-3" strokeWidth={2.25} /> WiFi: {data.wifiSsid ?? "—"}
           </p>
+          {data.wifiPassword && <p className="text-center">Password: {data.wifiPassword}</p>}
         </>
       )}
       <p className="mt-3 text-center">Salamat po! Tara, Kape ulit!</p>

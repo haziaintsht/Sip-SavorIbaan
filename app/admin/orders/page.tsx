@@ -65,15 +65,15 @@ export default function AdminOrdersPage() {
   const [limit, setLimit] = useState(50);
   const [hasMore, setHasMore] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
-  const [wifiByBranch, setWifiByBranch] = useState<Record<string, string | null>>({});
+  const [wifiByBranch, setWifiByBranch] = useState<Record<string, { ssid: string | null; password: string | null }>>({});
 
   useEffect(() => {
     supabase
       .from("branch_info")
-      .select("branch, wifi_password")
+      .select("branch, wifi_ssid, wifi_password")
       .then(({ data }) => {
-        const map: Record<string, string | null> = {};
-        for (const b of data ?? []) map[b.branch] = b.wifi_password;
+        const map: Record<string, { ssid: string | null; password: string | null }> = {};
+        for (const b of data ?? []) map[b.branch] = { ssid: b.wifi_ssid, password: b.wifi_password };
         setWifiByBranch(map);
       });
   }, [supabase]);
@@ -203,7 +203,8 @@ export default function AdminOrdersPage() {
       customerName: o.customer_name,
       discountReason: o.discount_reason,
       discountNote: o.discount_note,
-      wifiPassword: wifiByBranch[o.branch] ?? null,
+      wifiSsid: wifiByBranch[o.branch]?.ssid ?? null,
+      wifiPassword: wifiByBranch[o.branch]?.password ?? null,
     });
   }
 
