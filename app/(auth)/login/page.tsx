@@ -43,8 +43,9 @@ export default function LoginPage() {
       .eq("id", data.user.id)
       .single();
 
+    const isStaff = profile?.role === "admin" || profile?.role === "super_admin";
     const redirectTo = searchParams.get("redirectTo");
-    router.push(redirectTo ?? (profile?.role === "admin" ? "/admin" : "/dashboard"));
+    router.push(redirectTo ?? (isStaff ? "/admin" : "/dashboard"));
     router.refresh();
   }
 

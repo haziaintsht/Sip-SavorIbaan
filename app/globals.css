@@ -7,6 +7,11 @@
   --font-sans: "Inter", sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
 body {
   font-family: var(--font-sans);
 }
@@ -27,5 +32,13 @@ body {
 
   .chip-active {
     @apply border-[#2D5A27] bg-[#2D5A27] text-[#F9F6F0];
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }

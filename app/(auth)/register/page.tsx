@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [location, setLocation] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +30,7 @@ export default function RegisterPage() {
         data: {
           full_name: fullName,
           phone_number: phoneNumber,
+          location,
         },
       },
     });
@@ -79,6 +81,16 @@ export default function RegisterPage() {
             onChange={(e) => setPhoneNumber(e.target.value)}
             className="input"
             placeholder="09XX XXX XXXX"
+          />
+        </Field>
+
+        <Field label="Where do you live? (Town/City)">
+          <input
+            required
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="input"
+            placeholder="Ibaan, Batangas"
           />
         </Field>
 

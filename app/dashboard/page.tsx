@@ -18,16 +18,27 @@ type StampLog = {
   created_at: string;
 };
 
+type OrderHistoryRow = {
+  id: string;
+  created_at: string;
+  branch: string;
+  total: number;
+  status: "completed" | "voided";
+  item_summary: string;
+};
+
 export default function DashboardPage() {
   const supabase = createClient();
   const [fullName, setFullName] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [card, setCard] = useState<LoyaltyCardRow | null>(null);
   const [logs, setLogs] = useState<StampLog[]>([]);
+  const [orders, setOrders] = useState<OrderHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
 
     async function load() {
       const {
@@ -50,6 +61,23 @@ export default function DashboardPage() {
         .single();
       setCard(cardRow);
 
+      const { data: orderRows } = await supabase
+        .from("orders")
+        .select("id, created_at, branch, total, status, order_items(name, quantity)")
+        .eq("customer_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(15);
+      setOrders(
+        (orderRows ?? []).map((o: any) => ({
+          id: o.id,
+          created_at: o.created_at,
+          branch: o.branch,
+          total: o.total,
+          status: o.status,
+          item_summary: (o.order_items ?? []).map((i: any) => `${i.quantity}x ${i.name}`).join(", "),
+        }))
+      );
+
       if (cardRow) {
         const { data: logRows } = await supabase
           .from("stamp_logs")
@@ -58,6 +86,12 @@ export default function DashboardPage() {
           .order("created_at", { ascending: false })
           .limit(10);
         setLogs(logRows ?? []);
+
+        // In dev, React Strict Mode mounts this effect twice; if the first
+        // instance's cleanup already ran by the time we get here, skip
+        // subscribing — otherwise two channels with the same topic collide
+        // ("cannot add postgres_changes callbacks... after subscribe()").
+        if (cancelled) return;
 
         // Realtime: reflect stamps the moment an admin adds/redeems them
         channel = supabase
@@ -90,6 +124,7 @@ export default function DashboardPage() {
 
     load();
     return () => {
+      cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
   }, [supabase]);
@@ -146,6 +181,35 @@ export default function DashboardPage() {
                   minute: "2-digit",
                 })}
               </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="font-serif text-lg text-[#2D5A27]">Your orders</h2>
+        <ul className="mt-3 divide-y divide-stone-100">
+          {orders.length === 0 && (
+            <li className="py-3 text-sm text-stone-500">No orders yet — your first visit will show up here.</li>
+          )}
+          {orders.map((o) => (
+            <li key={o.id} className="py-3 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 flex-1 text-stone-700">
+                  {o.item_summary || "—"}
+                  {o.status === "voided" && <span className="text-stone-400"> · Voided</span>}
+                </p>
+                <span className="shrink-0 font-medium text-[#2D5A27]">₱{Number(o.total).toFixed(2)}</span>
+              </div>
+              <p className="mt-0.5 text-xs text-stone-400">
+                {o.branch} ·{" "}
+                {new Date(o.created_at).toLocaleDateString("en-PH", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </p>
             </li>
           ))}
         </ul>

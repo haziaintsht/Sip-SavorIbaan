@@ -1,152 +1,157 @@
-"use client";
+import { createClient } from "@/lib/supabase/server";
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+function startOfTodayISO() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
 
-type CustomerResult = {
-  id: string;
-  full_name: string;
-  phone_number: string | null;
-  card_id: string;
-  stamp_count: number;
-};
+export default async function AdminOverviewPage() {
+  const supabase = await createClient();
+  const todayISO = startOfTodayISO();
 
-const BRANCHES = ["Palindan Branch", "Uptown Branch"];
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: myProfile } = user
+    ? await supabase.from("profiles").select("role, branch").eq("id", user.id).single()
+    : { data: null };
+  const isBranchLocked = myProfile?.role === "admin" && !!myProfile.branch;
 
-export default function AdminPage() {
-  const supabase = createClient();
-  const [query, setQuery] = useState("");
-  const [branch, setBranch] = useState(BRANCHES[0]);
-  const [results, setResults] = useState<CustomerResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [{ count: customerCount }, { count: rewardsRedeemedTotal }, { data: todayLogs }, { data: todayOrders }, { data: todayItems }] =
+    await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "customer"),
+      supabase
+        .from("stamp_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("action", "REDEEM_REWARD"),
+      supabase
+        .from("stamp_logs")
+        .select("action, branch_location")
+        .gte("created_at", todayISO),
+      supabase
+        .from("orders")
+        .select("branch, total")
+        .eq("status", "completed")
+        .gte("created_at", todayISO),
+      supabase
+        .from("order_items")
+        .select("name, quantity, orders!inner(status, created_at)")
+        .eq("orders.status", "completed")
+        .gte("orders.created_at", todayISO),
+    ]);
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setSearching(true);
-    setActionMsg(null);
-
-    // Look up by name or phone number; a QR scan should populate `query`
-    // with the customer's loyalty ID (their auth.users.id) directly.
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, phone_number, loyalty_cards(id, stamp_count)")
-      .or(`full_name.ilike.%${query}%,phone_number.ilike.%${query}%,id.eq.${query}`)
-      .eq("role", "customer")
-      .limit(10);
-
-    setSearching(false);
-
-    if (error || !data) {
-      setActionMsg("Search failed. Try again.");
-      return;
+  const bestSellers = (() => {
+    const byName = new Map<string, number>();
+    for (const row of todayItems ?? []) {
+      byName.set(row.name, (byName.get(row.name) ?? 0) + row.quantity);
     }
+    return [...byName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  })();
 
-    setResults(
-      data
-        .filter((row: any) => row.loyalty_cards?.[0])
-        .map((row: any) => ({
-          id: row.id,
-          full_name: row.full_name,
-          phone_number: row.phone_number,
-          card_id: row.loyalty_cards[0].id,
-          stamp_count: row.loyalty_cards[0].stamp_count,
-        }))
-    );
+  const logs = todayLogs ?? [];
+  const stampsToday = logs.filter((l) => l.action === "ADD_STAMP").length;
+  const redeemsToday = logs.filter((l) => l.action === "REDEEM_REWARD").length;
+
+  const orders = todayOrders ?? [];
+  const revenueToday = orders.reduce((sum, o) => sum + Number(o.total), 0);
+  const ordersToday = orders.length;
+
+  const byBranch = new Map<string, { stamps: number; redeems: number; orders: number; revenue: number }>();
+  function entryFor(branch: string) {
+    const existing = byBranch.get(branch);
+    if (existing) return existing;
+    const fresh = { stamps: 0, redeems: 0, orders: 0, revenue: 0 };
+    byBranch.set(branch, fresh);
+    return fresh;
+  }
+  for (const log of logs) {
+    const branch = (log.branch_location ?? "Unspecified").replace(/ Branch$/, "");
+    const entry = entryFor(branch);
+    if (log.action === "ADD_STAMP") entry.stamps += 1;
+    else entry.redeems += 1;
+  }
+  for (const o of orders) {
+    const entry = entryFor(o.branch);
+    entry.orders += 1;
+    entry.revenue += Number(o.total);
   }
 
-  async function runAction(cardId: string, action: "ADD_STAMP" | "REDEEM_REWARD") {
-    setActionMsg(null);
-    const { error } = await supabase.rpc("stamp_action", {
-      p_card_id: cardId,
-      p_action: action,
-      p_branch_location: branch,
-    });
-
-    if (error) {
-      setActionMsg(error.message);
-      return;
-    }
-
-    setActionMsg(action === "ADD_STAMP" ? "Stamp added." : "Reward redeemed.");
-    setResults((prev) =>
-      prev.map((r) =>
-        r.card_id === cardId
-          ? { ...r, stamp_count: action === "ADD_STAMP" ? Math.min(r.stamp_count + 1, 10) : 0 }
-          : r
-      )
-    );
-  }
+  const stats = [
+    { label: "Revenue today", value: `₱${revenueToday.toFixed(2)}` },
+    { label: "Orders today", value: ordersToday },
+    { label: "Stamps given today", value: stampsToday },
+    { label: "Total customers", value: customerCount ?? 0 },
+    { label: "Rewards redeemed today", value: redeemsToday },
+    { label: "Rewards redeemed (all time)", value: rewardsRedeemedTotal ?? 0 },
+  ];
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-14">
-      <h1 className="font-serif text-3xl text-[#2D5A27]">Stamp Management</h1>
-      <p className="mt-1 text-sm text-stone-600">Look up a customer to add or redeem a stamp.</p>
-
-      <form onSubmit={handleSearch} className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Name, phone number, or scanned QR ID"
-          className="input flex-1"
-        />
-        <select value={branch} onChange={(e) => setBranch(e.target.value)} className="input sm:w-48">
-          {BRANCHES.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          disabled={searching}
-          className="rounded-full bg-[#2D5A27] px-6 py-3 text-sm font-medium text-[#F9F6F0] disabled:opacity-60"
-        >
-          {searching ? "Searching..." : "Search"}
-        </button>
-      </form>
-
-      <p className="mt-2 text-xs text-stone-500">
-        Tip: wire a QR scanner (e.g. <code>html5-qrcode</code>) to fill this field automatically
-        with the scanned loyalty ID.
+    <div>
+      <h2 className="font-serif text-2xl text-[#2D5A27]">Overview</h2>
+      <p className="mt-1 text-sm text-stone-600">
+        {isBranchLocked ? `Today at a glance — ${myProfile?.branch}.` : "Today at a glance."}
       </p>
 
-      {actionMsg && <p className="mt-4 text-sm text-[#2D5A27]">{actionMsg}</p>}
-
-      <div className="mt-8 flex flex-col gap-4">
-        {results.map((customer) => (
-          <div
-            key={customer.id}
-            className="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div>
-              <p className="font-medium text-stone-900">{customer.full_name}</p>
-              <p className="text-sm text-stone-500">{customer.phone_number ?? "—"}</p>
-              <p className="mt-1 text-sm text-[#2D5A27]">{customer.stamp_count} / 10 stamps</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => runAction(customer.card_id, "ADD_STAMP")}
-                disabled={customer.stamp_count >= 10}
-                className="rounded-full bg-[#2D5A27] px-4 py-2 text-sm text-[#F9F6F0] disabled:opacity-40"
-              >
-                + Add Digital Stamp
-              </button>
-              <button
-                onClick={() => runAction(customer.card_id, "REDEEM_REWARD")}
-                disabled={customer.stamp_count < 10}
-                className="rounded-full border border-[#2D5A27] px-4 py-2 text-sm text-[#2D5A27] disabled:opacity-40"
-              >
-                Redeem Reward
-              </button>
-            </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-2xl border border-stone-200 bg-white p-5">
+            <p className="text-2xl font-semibold text-[#2D5A27]">{s.value}</p>
+            <p className="mt-1 text-sm text-stone-500">{s.label}</p>
           </div>
         ))}
-
-        {!searching && results.length === 0 && query && (
-          <p className="text-sm text-stone-500">No verified customers matched that search.</p>
-        )}
       </div>
-    </main>
+
+      <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">Today&apos;s Best Sellers</h3>
+      {bestSellers.length === 0 ? (
+        <p className="mt-3 text-sm text-stone-500">No completed orders yet today.</p>
+      ) : (
+        <div className="mt-4 flex flex-col gap-2">
+          {bestSellers.map(([name, qty], i) => (
+            <div key={name} className="flex items-center justify-between rounded-2xl border border-stone-200 bg-white px-5 py-3">
+              <span className="text-stone-900">
+                <span className="mr-2 text-stone-400">#{i + 1}</span>
+                {name}
+              </span>
+              <span className="font-medium text-[#2D5A27]">{qty} sold</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isBranchLocked && (
+        <>
+      <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">Today by branch</h3>
+      {byBranch.size === 0 ? (
+        <p className="mt-3 text-sm text-stone-500">No activity yet today.</p>
+      ) : (
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-stone-200 bg-white">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-stone-200 text-stone-500">
+              <tr>
+                <th className="px-5 py-3 font-medium">Branch</th>
+                <th className="px-5 py-3 font-medium">Orders</th>
+                <th className="px-5 py-3 font-medium">Revenue</th>
+                <th className="px-5 py-3 font-medium">Stamps added</th>
+                <th className="px-5 py-3 font-medium">Rewards redeemed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...byBranch.entries()].map(([branch, counts]) => (
+                <tr key={branch} className="border-b border-stone-100 last:border-0">
+                  <td className="px-5 py-3 text-stone-900">{branch}</td>
+                  <td className="px-5 py-3 text-stone-700">{counts.orders}</td>
+                  <td className="px-5 py-3 text-stone-700">₱{counts.revenue.toFixed(2)}</td>
+                  <td className="px-5 py-3 text-stone-700">{counts.stamps}</td>
+                  <td className="px-5 py-3 text-stone-700">{counts.redeems}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+        </>
+      )}
+    </div>
   );
 }
