@@ -148,25 +148,16 @@ export default function Navbar({
         </button>
       </nav>
 
-      {/* Portaled to <body> because the header's backdrop-blur makes it a
+      {/* Invisible click-catcher so tapping outside the menu closes it.
+          Portaled to <body> because the header's backdrop-blur makes it a
           containing block for position:fixed descendants — a fixed overlay
           rendered inside header would be clipped to the header's own height
-          instead of covering the viewport. */}
+          instead of covering the viewport. No dimming: it's transparent on
+          purpose, purely for the outside-click behavior. */}
       {mounted &&
+        open &&
         createPortal(
-          <AnimatePresence>
-            {open && (
-              <motion.div
-                key="backdrop"
-                className="fixed inset-0 z-40 bg-stone-900/30 md:hidden"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                onClick={() => setOpen(false)}
-              />
-            )}
-          </AnimatePresence>,
+          <div className="fixed inset-0 z-40 md:hidden" onClick={() => setOpen(false)} />,
           document.body
         )}
 
