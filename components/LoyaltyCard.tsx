@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { Coffee } from "lucide-react";
 
 const TOTAL_SLOTS = 10;
 
@@ -67,7 +68,7 @@ export default function LoyaltyCard({ stampCount }: { stampCount: number }) {
                   : "border-dashed border-[#8a6d4a]/40 text-[#8a6d4a]/50"
               } ${i === pulseIndex ? "animate-stamp-pop" : ""}`}
             >
-              {filled ? "☕" : i + 1}
+              {filled ? <Coffee className="h-4 w-4" strokeWidth={2.25} /> : i + 1}
             </div>
           ))}
         </div>

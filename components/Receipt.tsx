@@ -1,3 +1,5 @@
+import { Wifi } from "lucide-react";
+
 export type ReceiptItem = { key: string; name: string; unitPrice: number; quantity: number };
 
 export type ReceiptData = {
@@ -74,10 +76,12 @@ export default function Receipt({ data }: { data: ReceiptData }) {
       {data.wifiPassword && (
         <>
           <div className="my-2 border-t border-dashed border-black" />
-          <p className="text-center">📶 WiFi: {data.wifiPassword}</p>
+          <p className="flex items-center justify-center gap-1 text-center">
+            <Wifi className="h-3 w-3" strokeWidth={2.25} /> WiFi: {data.wifiPassword}
+          </p>
         </>
       )}
-      <p className="mt-3 text-center">Salamat po! Tara, Kape ulit! ☕</p>
+      <p className="mt-3 text-center">Salamat po! Tara, Kape ulit!</p>
     </div>
   );
 }

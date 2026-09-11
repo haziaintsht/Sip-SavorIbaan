@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Coffee } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 
@@ -316,7 +317,7 @@ export default function AdminStampsPage() {
                             : "border border-dashed border-stone-300 text-stone-300"
                         }`}
                       >
-                        {i < c.stampCount ? "☕" : i + 1}
+                        {i < c.stampCount ? <Coffee className="h-3 w-3" strokeWidth={2.25} /> : i + 1}
                       </div>
                     ))}
                   </div>

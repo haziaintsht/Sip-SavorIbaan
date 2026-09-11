@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { Coffee, PartyPopper } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import LoyaltyCard from "@/components/LoyaltyCard";
 import Toast, { type ToastData } from "@/components/Toast";
@@ -40,9 +42,9 @@ export default function DashboardPage() {
   const prevCardRef = useRef<LoyaltyCardRow | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function fireToast(message: string, emoji: string) {
+  function fireToast(message: string, icon: LucideIcon) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToast({ id: Date.now(), message, emoji });
+    setToast({ id: Date.now(), message, icon });
     toastTimerRef.current = setTimeout(() => setToast(null), 4000);
   }
 
@@ -120,9 +122,9 @@ export default function DashboardPage() {
               const prev = prevCardRef.current;
               if (prev) {
                 if (updated.total_earned_rewards > prev.total_earned_rewards) {
-                  fireToast("Reward redeemed — enjoy your free drink!", "🎉");
+                  fireToast("Reward redeemed — enjoy your free drink!", PartyPopper);
                 } else if (updated.stamp_count > prev.stamp_count) {
-                  fireToast("You've received a stamp!", "☕");
+                  fireToast("You've received a stamp!", Coffee);
                 }
               }
               prevCardRef.current = updated;
