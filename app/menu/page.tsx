@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Star, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatMenuPrice } from "@/lib/menuPrice";
@@ -54,7 +55,10 @@ type MenuItemRow = {
 
 export default function MenuPage() {
   const supabase = createClient();
-  const [branch, setBranch] = useState<Branch>("Palindan");
+  const searchParams = useSearchParams();
+  const [branch, setBranch] = useState<Branch>(() =>
+    searchParams.get("branch") === "Uptown" ? "Uptown" : "Palindan"
+  );
   const [items, setItems] = useState<MenuItemRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -65,6 +69,15 @@ export default function MenuPage() {
   const [selectedItem, setSelectedItem] = useState<MenuItemRow | null>(null);
 
   const categories = CATEGORIES_BY_BRANCH[branch];
+
+  // Navigating to /menu?branch=... while already on this page (e.g. picking
+  // a different branch from the nav's branch picker) doesn't remount the
+  // component, so the useState initializer above wouldn't see the change —
+  // watch the param directly instead.
+  useEffect(() => {
+    const b = searchParams.get("branch");
+    if (b === "Uptown" || b === "Palindan") setBranch(b);
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;

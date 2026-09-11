@@ -2,13 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu as MenuIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { clearRememberPreference } from "@/lib/rememberMe";
+import BranchPickerModal from "@/components/BranchPickerModal";
 
 type Role = "customer" | "admin" | "super_admin" | null;
 
@@ -26,11 +27,23 @@ export default function Navbar({
   initialRole?: Role;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const supabase = createClient();
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<Role>(initialRole);
   const [loggedIn, setLoggedIn] = useState(initialLoggedIn);
   const [mounted, setMounted] = useState(false);
+  const [showBranchPicker, setShowBranchPicker] = useState(false);
+
+  function openBranchPicker() {
+    setOpen(false);
+    setShowBranchPicker(true);
+  }
+
+  function goToBranchMenu(branch: "Palindan" | "Uptown") {
+    setShowBranchPicker(false);
+    router.push(`/menu?branch=${branch}`);
+  }
 
   useEffect(() => setMounted(true), []);
 
@@ -107,9 +120,9 @@ export default function Navbar({
               Home
             </Link>
           )}
-          <Link href="/menu" className="text-sm text-stone-700 hover:text-[#2D5A27]">
+          <button onClick={openBranchPicker} className="text-sm text-stone-700 hover:text-[#2D5A27]">
             Menu
-          </Link>
+          </button>
 
           {loggedIn ? (
             <>
@@ -155,11 +168,16 @@ export default function Navbar({
           containing block for position:fixed descendants — a fixed overlay
           rendered inside header would be clipped to the header's own height
           instead of covering the viewport. No dimming: it's transparent on
-          purpose, purely for the outside-click behavior. */}
+          purpose, purely for the outside-click behavior.
+          z-30, not z-40: header (sticky + z-40) is its own stacking context,
+          so nothing inside it — however high its own z-index — can ever
+          out-rank this catcher once it ties header's z-40 from outside; the
+          catcher must stay strictly below header's z-index for header's
+          content (the menu panel included) to reliably paint on top of it. */}
       {mounted &&
         open &&
         createPortal(
-          <div className="fixed inset-0 z-40 md:hidden" onClick={() => setOpen(false)} />,
+          <div className="fixed inset-0 z-30 md:hidden" onClick={() => setOpen(false)} />,
           document.body
         )}
 
@@ -184,9 +202,12 @@ export default function Navbar({
                   Home
                 </Link>
               )}
-              <Link href="/menu" className="rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-[#2D5A27]/5">
+              <button
+                onClick={openBranchPicker}
+                className="rounded-lg px-3 py-2 text-left text-sm text-stone-700 hover:bg-[#2D5A27]/5"
+              >
                 Menu
-              </Link>
+              </button>
               {loggedIn ? (
                 <>
                   {isStaff && (
@@ -214,6 +235,20 @@ export default function Navbar({
             </motion.div>
         )}
       </AnimatePresence>
+
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {showBranchPicker && (
+              <BranchPickerModal
+                key="branch-picker"
+                onSelect={goToBranchMenu}
+                onClose={() => setShowBranchPicker(false)}
+              />
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
     </header>
   );
 }
