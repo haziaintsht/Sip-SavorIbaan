@@ -126,7 +126,7 @@ export default function Navbar({
                 href="/register"
                 className="rounded-full bg-[#2D5A27] px-4 py-2 text-sm text-[#F9F6F0]"
               >
-                Join loyalty
+                Join us
               </Link>
             </>
           )}
@@ -179,7 +179,7 @@ export default function Navbar({
           ) : (
             <>
               <Link href="/login" className="py-2 text-sm text-stone-700">Log in</Link>
-              <Link href="/register" className="py-2 text-sm text-[#2D5A27]">Join loyalty</Link>
+              <Link href="/register" className="py-2 text-sm text-[#2D5A27]">Join us</Link>
             </>
           )}
         </div>
