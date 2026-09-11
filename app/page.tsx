@@ -176,6 +176,17 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* Community photo strip */}
+      <section className="bg-[#F9F6F0] py-16">
+        <Reveal className="mx-auto max-w-6xl px-6 text-center">
+          <p className="text-sm uppercase tracking-widest text-[#2D5A27]/60">Good Company</p>
+          <h2 className="mt-1 font-serif text-3xl text-[#2D5A27]">Moments at the Spot</h2>
+        </Reveal>
+        <div className="mt-8">
+          <PhotoMarquee />
+        </div>
+      </section>
+
       {/* Brand Story */}
       <section id="story" className="scroll-mt-20 px-6 py-16">
         <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 sm:items-center">
@@ -266,17 +277,6 @@ export default async function HomePage() {
               </Reveal>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Community photo strip */}
-      <section className="bg-[#F9F6F0] py-16">
-        <Reveal className="mx-auto max-w-6xl px-6 text-center">
-          <p className="text-sm uppercase tracking-widest text-[#2D5A27]/60">Good Company</p>
-          <h2 className="mt-1 font-serif text-3xl text-[#2D5A27]">Moments at the Spot</h2>
-        </Reveal>
-        <div className="mt-8">
-          <PhotoMarquee />
         </div>
       </section>
     </main>
