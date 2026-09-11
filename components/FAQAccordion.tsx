@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const FAQS = [
+const FAQS: { q: string; a: string; icon?: LucideIcon }[] = [
   {
     q: "Do you have a secret menu?",
-    a: "We do — a handful of drinks that never made it onto the printed board. They're hiding on the menu page for anyone curious enough to go looking. 👀",
+    a: "We do — a handful of drinks that never made it onto the printed board. They're hiding on the menu page for anyone curious enough to go looking.",
+    icon: Eye,
   },
   {
     q: "What are your hours?",
@@ -60,7 +62,10 @@ export default function FAQAccordion() {
                 open ? "grid-rows-[1fr] pb-4 opacity-100" : "grid-rows-[0fr] opacity-0"
               }`}
             >
-              <div className="min-h-0">{item.a}</div>
+              <div className="flex min-h-0 items-start gap-1.5">
+                <span>{item.a}</span>
+                {item.icon && <item.icon size={15} className="mt-0.5 shrink-0 text-[#2D5A27]/70" aria-hidden="true" />}
+              </div>
             </div>
           </div>
         );

@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { Menu as MenuIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -27,6 +29,9 @@ export default function Navbar({
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<Role>(initialRole);
   const [loggedIn, setLoggedIn] = useState(initialLoggedIn);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     async function syncFromUser(user: { id: string } | null) {
@@ -73,7 +78,7 @@ export default function Navbar({
 
   return (
     <header className="sticky top-0 z-40 border-b border-[#2D5A27]/10 bg-[#F9F6F0]/95 backdrop-blur">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <nav className="relative z-50 mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-2.5">
           <Image
             src="/logo_sns.jpg"
@@ -143,41 +148,79 @@ export default function Navbar({
         </button>
       </nav>
 
-      {open && (
-        <div className="flex flex-col gap-1 border-t border-[#2D5A27]/10 px-6 py-4 md:hidden">
-          {!loggedIn &&
-            siteLinks.map((l) => (
-              <Link key={l.href} href={l.href} className="py-2 text-sm text-stone-700">
-                {l.label}
-              </Link>
-            ))}
-          {loggedIn && !isStaff && (
-            <Link href="/dashboard" className="py-2 text-sm text-stone-700">
-              Home
-            </Link>
-          )}
-          <Link href="/menu" className="py-2 text-sm text-stone-700">
-            Menu
-          </Link>
-          {loggedIn ? (
-            <>
-              {isStaff && (
-                <Link href="/admin" className="py-2 text-sm text-stone-700">
-                  Admin Panel
+      {/* Portaled to <body> because the header's backdrop-blur makes it a
+          containing block for position:fixed descendants — a fixed overlay
+          rendered inside header would be clipped to the header's own height
+          instead of covering the viewport. */}
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                key="backdrop"
+                className="fixed inset-0 z-40 bg-stone-900/30 md:hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => setOpen(false)}
+              />
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+
+      <AnimatePresence>
+        {open && (
+            <motion.div
+              key="menu"
+              className="absolute inset-x-4 top-full z-40 mt-2 flex flex-col gap-1 rounded-2xl border border-[#2D5A27]/10 bg-[#F9F6F0] p-3 shadow-xl md:hidden"
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            >
+              {!loggedIn &&
+                siteLinks.map((l) => (
+                  <Link key={l.href} href={l.href} className="rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-[#2D5A27]/5">
+                    {l.label}
+                  </Link>
+                ))}
+              {loggedIn && !isStaff && (
+                <Link href="/dashboard" className="rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-[#2D5A27]/5">
+                  Home
                 </Link>
               )}
-              <button onClick={handleLogout} className="py-2 text-left text-sm text-[#2D5A27]">
-                Log out
-              </button>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="py-2 text-sm text-stone-700">Log in</Link>
-              <Link href="/register" className="py-2 text-sm text-[#2D5A27]">Join us</Link>
-            </>
-          )}
-        </div>
-      )}
+              <Link href="/menu" className="rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-[#2D5A27]/5">
+                Menu
+              </Link>
+              {loggedIn ? (
+                <>
+                  {isStaff && (
+                    <Link href="/admin" className="rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-[#2D5A27]/5">
+                      Admin Panel
+                    </Link>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className="rounded-lg px-3 py-2 text-left text-sm text-[#2D5A27] hover:bg-[#2D5A27]/5"
+                  >
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-[#2D5A27]/5">
+                    Log in
+                  </Link>
+                  <Link href="/register" className="rounded-lg px-3 py-2 text-sm font-medium text-[#2D5A27] hover:bg-[#2D5A27]/5">
+                    Join us
+                  </Link>
+                </>
+              )}
+            </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 
@@ -150,7 +151,11 @@ export default function AdminSettingsPage() {
                 >
                   {savingBranch === b.branch ? "Saving…" : "Save"}
                 </button>
-                {savedBranch === b.branch && <span className="text-sm text-[#2D5A27]">Saved ✓</span>}
+                {savedBranch === b.branch && (
+                  <span className="flex items-center gap-1 text-sm text-[#2D5A27]">
+                    <Check size={15} strokeWidth={2.5} /> Saved
+                  </span>
+                )}
               </div>
             </div>
           ))}

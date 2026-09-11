@@ -206,8 +206,9 @@ export default function MenuPage() {
       </div>
 
       {unlocked && (
-        <div className="mt-8 rounded-2xl border border-[#2D5A27]/20 bg-[#2D5A27]/5 px-5 py-4 text-sm text-[#2D5A27]">
-          🌟 Secret menu unlocked. These drinks aren&apos;t on the printed board.
+        <div className="mt-8 flex items-center gap-2 rounded-2xl border border-[#2D5A27]/20 bg-[#2D5A27]/5 px-5 py-4 text-sm text-[#2D5A27]">
+          <Star size={16} className="shrink-0" aria-hidden="true" />
+          Secret menu unlocked. These drinks aren&apos;t on the printed board.
         </div>
       )}
 
