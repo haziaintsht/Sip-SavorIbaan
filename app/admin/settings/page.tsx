@@ -10,6 +10,7 @@ type BranchInfo = {
   hours: string;
   map_lat: number | null;
   map_lng: number | null;
+  wifi_password: string | null;
 };
 
 export default function AdminSettingsPage() {
@@ -25,7 +26,7 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     supabase
       .from("branch_info")
-      .select("branch, address, hours, map_lat, map_lng")
+      .select("branch, address, hours, map_lat, map_lng, wifi_password")
       .order("branch")
       .then(({ data }) => {
         setBranches(data ?? []);
@@ -49,7 +50,7 @@ export default function AdminSettingsPage() {
     setError(null);
     const { error } = await supabase
       .from("branch_info")
-      .update({ address: b.address, hours: b.hours, map_lat: b.map_lat, map_lng: b.map_lng })
+      .update({ address: b.address, hours: b.hours, map_lat: b.map_lat, map_lng: b.map_lng, wifi_password: b.wifi_password })
       .eq("branch", b.branch);
     setSavingBranch(null);
     if (error) {
@@ -130,6 +131,16 @@ export default function AdminSettingsPage() {
               <p className="mt-1.5 text-xs text-stone-400">
                 Leave blank to fall back to a text search on the address instead of an exact pin.
               </p>
+
+              <label className="mt-3 flex flex-col gap-1.5 text-sm text-stone-700">
+                WiFi password
+                <input
+                  value={b.wifi_password ?? ""}
+                  onChange={(e) => updateField(b.branch, "wifi_password", e.target.value)}
+                  className="input"
+                  placeholder="Shown at the bottom of every receipt"
+                />
+              </label>
 
               <div className="mt-4 flex items-center gap-3">
                 <button

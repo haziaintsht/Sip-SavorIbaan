@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import { Download } from "lucide-react";
+import ReceiptModal from "@/components/ReceiptModal";
+import type { ReceiptData } from "@/components/Receipt";
 
 function toCsvValue(v: string | number) {
   const s = String(v);
@@ -34,21 +36,6 @@ type OrderRow = {
   discount_note: string | null;
 };
 
-type ReceiptData = {
-  id: string;
-  createdAt: string;
-  branch: string;
-  items: OrderItem[];
-  subtotal: number;
-  discount: number;
-  tax: number;
-  total: number;
-  paymentMethod: string;
-  customerName: string | null;
-  discountReason: string | null;
-  discountNote: string | null;
-};
-
 function rangeStart(range: DateRange): string | null {
   if (range === "all") return null;
   const d = new Date();
@@ -77,6 +64,18 @@ export default function AdminOrdersPage() {
   const [limit, setLimit] = useState(50);
   const [hasMore, setHasMore] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [wifiByBranch, setWifiByBranch] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    supabase
+      .from("branch_info")
+      .select("branch, wifi_password")
+      .then(({ data }) => {
+        const map: Record<string, string | null> = {};
+        for (const b of data ?? []) map[b.branch] = b.wifi_password;
+        setWifiByBranch(map);
+      });
+  }, [supabase]);
 
   async function load() {
     setLoading(true);
@@ -203,8 +202,8 @@ export default function AdminOrdersPage() {
       customerName: o.customer_name,
       discountReason: o.discount_reason,
       discountNote: o.discount_note,
+      wifiPassword: wifiByBranch[o.branch] ?? null,
     });
-    setTimeout(() => window.print(), 50);
   }
 
   async function voidOrder(id: string) {
@@ -396,52 +395,7 @@ export default function AdminOrdersPage() {
       )}
       </div>
 
-      {/* Print-only receipt — hidden on screen, shown only when printing */}
-      {receipt && (
-        <div className="hidden print:block">
-          <div className="mx-auto max-w-xs font-mono text-xs text-black">
-            <p className="text-center text-sm font-bold">SIP &amp; SAVOR SPOT</p>
-            <p className="text-center">{receipt.branch} Branch</p>
-            <p className="text-center">{new Date(receipt.createdAt).toLocaleString("en-PH")}</p>
-            <p className="mt-1 text-center">Order #{receipt.id.slice(0, 8)}</p>
-            <div className="my-2 border-t border-dashed border-black" />
-            {receipt.items.map((l) => (
-              <div key={l.key} className="flex justify-between">
-                <span>
-                  {l.quantity}x {l.name}
-                </span>
-                <span>₱{(l.unitPrice * l.quantity).toFixed(2)}</span>
-              </div>
-            ))}
-            <div className="my-2 border-t border-dashed border-black" />
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>₱{receipt.subtotal.toFixed(2)}</span>
-            </div>
-            {receipt.discount > 0 && (
-              <div className="flex justify-between">
-                <span>Discount{receipt.discountReason ? ` (${receipt.discountReason})` : ""}</span>
-                <span>−₱{receipt.discount.toFixed(2)}</span>
-              </div>
-            )}
-            {receipt.discountNote && <p className="text-[10px]">Note: {receipt.discountNote}</p>}
-            {receipt.tax > 0 && (
-              <div className="flex justify-between">
-                <span>Tax</span>
-                <span>+₱{receipt.tax.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-bold">
-              <span>TOTAL</span>
-              <span>₱{receipt.total.toFixed(2)}</span>
-            </div>
-            <div className="my-2 border-t border-dashed border-black" />
-            <p>Payment: {receipt.paymentMethod}</p>
-            {receipt.customerName && <p>Customer: {receipt.customerName}</p>}
-            <p className="mt-3 text-center">Salamat po! Tara, Kape ulit! ☕</p>
-          </div>
-        </div>
-      )}
+      {receipt && <ReceiptModal data={receipt} onClose={() => setReceipt(null)} />}
     </div>
   );
 }

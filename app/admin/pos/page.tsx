@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
+import ReceiptModal from "@/components/ReceiptModal";
+import type { ReceiptData } from "@/components/Receipt";
 
 type Branch = "Palindan" | "Uptown";
 const BRANCHES: Branch[] = ["Palindan", "Uptown"];
@@ -46,23 +48,6 @@ type RecentOrder = {
   customer_name: string | null;
   item_summary: string;
   items: CartLine[];
-};
-
-type ReceiptData = {
-  id: string;
-  createdAt: string;
-  branch: Branch;
-  items: CartLine[];
-  subtotal: number;
-  discount: number;
-  tax: number;
-  total: number;
-  paymentMethod: string;
-  customerName: string | null;
-  cashReceived: number | null;
-  changeDue: number | null;
-  discountReason: string | null;
-  discountNote: string | null;
 };
 
 type HeldOrder = {
@@ -143,6 +128,7 @@ export default function AdminPOSPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [wifiPassword, setWifiPassword] = useState<string | null>(null);
 
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -164,6 +150,15 @@ export default function AdminPOSPage() {
     return () => {
       cancelled = true;
     };
+  }, [supabase, branch]);
+
+  useEffect(() => {
+    supabase
+      .from("branch_info")
+      .select("wifi_password")
+      .eq("branch", branch)
+      .maybeSingle()
+      .then(({ data }) => setWifiPassword(data?.wifi_password ?? null));
   }, [supabase, branch]);
 
   async function loadRecentOrders(b: Branch) {
@@ -434,6 +429,7 @@ export default function AdminPOSPage() {
       changeDue: paymentMethod === "Cash" && cashReceivedNum > 0 ? changeDue : null,
       discountReason: discountAmount > 0 ? discountReason || null : null,
       discountNote: discountAmount > 0 ? discountNote.trim() || null : null,
+      wifiPassword,
     });
 
     setCompleting(false);
@@ -478,8 +474,8 @@ export default function AdminPOSPage() {
       changeDue: null,
       discountReason: null,
       discountNote: null,
+      wifiPassword,
     });
-    setTimeout(() => window.print(), 50);
   }
 
   async function toggle86(item: MenuItemRow) {
@@ -778,7 +774,7 @@ export default function AdminPOSPage() {
                     </div>
                     <span className="shrink-0 font-medium text-[#2D5A27]">₱{Number(o.total).toFixed(2)}</span>
                     <button onClick={() => reprintOrder(o)} className="shrink-0 text-xs text-stone-500 hover:underline">
-                      Reprint
+                      E-Receipt
                     </button>
                     {o.status === "completed" && (
                       <button onClick={() => voidOrder(o.id)} className="shrink-0 text-xs text-red-500 hover:underline">
@@ -1052,13 +1048,8 @@ export default function AdminPOSPage() {
 
           {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
           {successMsg && (
-            <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="mt-3">
               <p className="text-sm text-[#2D5A27]">{successMsg}</p>
-              {receipt && (
-                <button onClick={() => window.print()} className="shrink-0 text-xs font-medium text-[#2D5A27] underline">
-                  Print Receipt
-                </button>
-              )}
             </div>
           )}
 
@@ -1191,64 +1182,7 @@ export default function AdminPOSPage() {
         </div>
       )}
 
-      {/* Print-only receipt — hidden on screen, shown only when printing */}
-      {receipt && (
-        <div className="hidden print:block">
-          <div className="mx-auto max-w-xs font-mono text-xs text-black">
-            <p className="text-center text-sm font-bold">SIP &amp; SAVOR SPOT</p>
-            <p className="text-center">{receipt.branch} Branch</p>
-            <p className="text-center">{new Date(receipt.createdAt).toLocaleString("en-PH")}</p>
-            <p className="mt-1 text-center">Order #{receipt.id.slice(0, 8)}</p>
-            <div className="my-2 border-t border-dashed border-black" />
-            {receipt.items.map((l) => (
-              <div key={l.key} className="flex justify-between">
-                <span>
-                  {l.quantity}x {l.name}
-                </span>
-                <span>₱{(l.unitPrice * l.quantity).toFixed(2)}</span>
-              </div>
-            ))}
-            <div className="my-2 border-t border-dashed border-black" />
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>₱{receipt.subtotal.toFixed(2)}</span>
-            </div>
-            {receipt.discount > 0 && (
-              <div className="flex justify-between">
-                <span>Discount{receipt.discountReason ? ` (${receipt.discountReason})` : ""}</span>
-                <span>−₱{receipt.discount.toFixed(2)}</span>
-              </div>
-            )}
-            {receipt.discountNote && <p className="text-[10px]">Note: {receipt.discountNote}</p>}
-            {receipt.tax > 0 && (
-              <div className="flex justify-between">
-                <span>Tax</span>
-                <span>+₱{receipt.tax.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-bold">
-              <span>TOTAL</span>
-              <span>₱{receipt.total.toFixed(2)}</span>
-            </div>
-            <div className="my-2 border-t border-dashed border-black" />
-            <p>Payment: {receipt.paymentMethod}</p>
-            {receipt.cashReceived !== null && (
-              <div className="flex justify-between">
-                <span>Cash received</span>
-                <span>₱{receipt.cashReceived.toFixed(2)}</span>
-              </div>
-            )}
-            {receipt.changeDue !== null && (
-              <div className="flex justify-between">
-                <span>Change</span>
-                <span>₱{receipt.changeDue.toFixed(2)}</span>
-              </div>
-            )}
-            {receipt.customerName && <p>Customer: {receipt.customerName} (+1 stamp)</p>}
-            <p className="mt-3 text-center">Salamat po! Tara, Kape ulit! ☕</p>
-          </div>
-        </div>
-      )}
+      {receipt && <ReceiptModal data={receipt} onClose={() => setReceipt(null)} />}
     </div>
   );
 }
