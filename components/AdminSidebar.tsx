@@ -16,11 +16,23 @@ import {
   LogOut,
   Menu as MenuIcon,
   X,
+  UserCog,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
+import type { LucideIcon } from "lucide-react";
 
-const NAV_GROUPS = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  hideForSuperAdmin?: boolean;
+  superAdminOnly?: boolean;
+};
+
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Overview",
     items: [{ href: "/admin", label: "Overview", icon: LayoutDashboard }],
@@ -47,6 +59,14 @@ const NAV_GROUPS = [
   {
     label: "System",
     items: [{ href: "/admin/logs", label: "Activity Log", icon: History }],
+  },
+  {
+    label: "Management",
+    items: [
+      { href: "/admin/analytics", label: "Analytics", icon: BarChart3, superAdminOnly: true },
+      { href: "/admin/staff", label: "Staff", icon: UserCog, superAdminOnly: true },
+      { href: "/admin/settings", label: "Settings", icon: Settings, superAdminOnly: true },
+    ],
   },
 ];
 
@@ -118,7 +138,11 @@ export default function AdminSidebar() {
 
         <nav className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
           {NAV_GROUPS.map((group) => {
-            const items = group.items.filter((item) => !item.hideForSuperAdmin || access.role !== "super_admin");
+            const items = group.items.filter(
+              (item) =>
+                (!item.hideForSuperAdmin || access.role !== "super_admin") &&
+                (!item.superAdminOnly || access.role === "super_admin")
+            );
             if (items.length === 0) return null;
             return (
               <div key={group.label}>

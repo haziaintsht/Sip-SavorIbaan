@@ -7,15 +7,28 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SocialIcons from "@/components/SocialIcons";
 
-const BRANCHES = [
-  { name: "Palindan Branch", address: "Old Alternate Route, Palindan", hours: "10:00 AM – 12:00 MN" },
-  { name: "Uptown Branch", address: "Inside Ibaan Recreation Park, Poblacion", hours: "8:00 AM – 12:00 MN" },
+const FALLBACK_BRANCHES = [
+  { name: "Palindan Branch", address: "Old Alternate Route, Palindan" },
+  { name: "Uptown Branch", address: "Inside Ibaan Recreation Park, Poblacion" },
 ];
 
 export default function Footer() {
   const pathname = usePathname();
   const supabase = createClient();
   const [loggedIn, setLoggedIn] = useState(false);
+  const [branches, setBranches] = useState(FALLBACK_BRANCHES);
+
+  useEffect(() => {
+    supabase
+      .from("branch_info")
+      .select("branch, address")
+      .order("branch")
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setBranches(data.map((b) => ({ name: `${b.branch} Branch`, address: b.address })));
+        }
+      });
+  }, [supabase]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -64,7 +77,7 @@ export default function Footer() {
         <div>
           <h3 className="text-sm font-semibold text-[#F9F6F0]">Visit Us</h3>
           <ul className="mt-3 flex flex-col gap-2 text-sm text-[#F9F6F0]/80">
-            {BRANCHES.map((b) => (
+            {branches.map((b) => (
               <li key={b.name}>
                 {b.name} — {b.address}
               </li>

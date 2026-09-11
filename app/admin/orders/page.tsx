@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
+import { Download } from "lucide-react";
+
+function toCsvValue(v: string | number) {
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
 
 type Branch = "Palindan" | "Uptown";
 type DateRange = "today" | "7d" | "30d" | "all";
@@ -157,6 +163,32 @@ export default function AdminOrdersPage() {
     };
   }, [visibleOrders]);
 
+  function exportCsv() {
+    const header = ["When", "Branch", "Items", "Customer", "Staff", "Payment", "Total", "Status"];
+    const lines = visibleOrders.map((o) =>
+      [
+        new Date(o.created_at).toLocaleString("en-PH"),
+        o.branch,
+        o.item_summary,
+        o.customer_name ?? "",
+        o.staff_name ?? "",
+        o.payment_method,
+        Number(o.total).toFixed(2),
+        o.status,
+      ]
+        .map(toCsvValue)
+        .join(",")
+    );
+    const csv = [header.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function viewReceipt(o: OrderRow) {
     setReceipt({
       id: o.id,
@@ -188,10 +220,22 @@ export default function AdminOrdersPage() {
   return (
     <div>
       <div className="print:hidden">
-      <h2 className="font-serif text-2xl text-[#2D5A27]">Orders</h2>
-      <p className="mt-1 text-sm text-stone-600">
-        {access.isBranchLocked ? `Order history for ${access.branch}.` : "Full order history across both branches."}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-2xl text-[#2D5A27]">Orders</h2>
+          <p className="mt-1 text-sm text-stone-600">
+            {access.isBranchLocked ? `Order history for ${access.branch}.` : "Full order history across both branches."}
+          </p>
+        </div>
+        <button
+          onClick={exportCsv}
+          disabled={visibleOrders.length === 0}
+          className="flex items-center gap-1.5 rounded-full border border-stone-300 px-4 py-2 text-sm text-stone-600 transition hover:border-[#2D5A27] hover:text-[#2D5A27] disabled:opacity-50"
+        >
+          <Download size={15} />
+          Export CSV
+        </button>
+      </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
         {access.isBranchLocked ? (

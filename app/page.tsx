@@ -6,12 +6,11 @@ import Reveal from "@/components/Reveal";
 import FAQAccordion from "@/components/FAQAccordion";
 import PhotoMarquee from "@/components/PhotoMarquee";
 
-const branches = [
+const FALLBACK_BRANCHES = [
   {
     name: "Palindan Branch",
     address: "Old Alternate Route, Palindan",
     hours: "10:00 AM – 12:00 MN",
-    // Exact coordinates from the verified "Sip & Savor Spot - Palindan" listing.
     mapQuery: "13.825266,121.132656",
   },
   {
@@ -53,6 +52,21 @@ export default async function HomePage() {
     .not("image_url", "is", null)
     .order("sort_order", { ascending: true })
     .limit(6);
+
+  const { data: branchInfo } = await supabase
+    .from("branch_info")
+    .select("branch, address, hours, map_lat, map_lng")
+    .order("branch");
+
+  const branches =
+    branchInfo && branchInfo.length > 0
+      ? branchInfo.map((b) => ({
+          name: `${b.branch} Branch`,
+          address: b.address,
+          hours: b.hours,
+          mapQuery: b.map_lat !== null && b.map_lng !== null ? `${b.map_lat},${b.map_lng}` : `${b.address}, Ibaan, Batangas`,
+        }))
+      : FALLBACK_BRANCHES;
 
   return (
     <main>

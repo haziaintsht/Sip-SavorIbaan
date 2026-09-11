@@ -84,13 +84,13 @@ export default function RegisterPage() {
           />
         </Field>
 
-        <Field label="Where do you live? (Town/City)">
+        <Field label="Barangay">
           <input
             required
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             className="input"
-            placeholder="Ibaan, Batangas"
+            placeholder="e.g. Poblacion"
           />
         </Field>
 
