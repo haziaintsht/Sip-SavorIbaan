@@ -14,6 +14,14 @@ type CustomerResult = {
   stamp_count: number;
 };
 
+type CardWithStamps = {
+  cardId: string;
+  fullName: string;
+  phoneNumber: string | null;
+  stampCount: number;
+  stampDates: string[];
+};
+
 const BRANCHES = ["Palindan Branch", "Uptown Branch"];
 const SCANNER_ELEMENT_ID = "qr-reader";
 
@@ -32,6 +40,52 @@ export default function AdminStampsPage() {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const scannerRef = useRef<import("html5-qrcode").Html5QrcodeScanner | null>(null);
+
+  const [cardsWithStamps, setCardsWithStamps] = useState<CardWithStamps[]>([]);
+  const [loadingCards, setLoadingCards] = useState(true);
+
+  async function loadCardsWithStamps() {
+    setLoadingCards(true);
+    const { data: cards } = await supabase
+      .from("loyalty_cards")
+      .select("id, stamp_count, profiles(full_name, phone_number)")
+      .gt("stamp_count", 0)
+      .order("stamp_count", { ascending: false });
+
+    const cardRows = cards ?? [];
+    const cardIds = cardRows.map((c: any) => c.id);
+
+    const datesByCard = new Map<string, string[]>();
+    if (cardIds.length > 0) {
+      const { data: logs } = await supabase
+        .from("stamp_logs")
+        .select("card_id, created_at")
+        .eq("action", "ADD_STAMP")
+        .in("card_id", cardIds)
+        .order("created_at", { ascending: true });
+
+      for (const log of logs ?? []) {
+        const list = datesByCard.get(log.card_id) ?? [];
+        list.push(log.created_at);
+        datesByCard.set(log.card_id, list);
+      }
+    }
+
+    setCardsWithStamps(
+      cardRows.map((c: any) => ({
+        cardId: c.id,
+        fullName: c.profiles?.full_name ?? "Unknown",
+        phoneNumber: c.profiles?.phone_number ?? null,
+        stampCount: c.stamp_count,
+        stampDates: datesByCard.get(c.id) ?? [],
+      }))
+    );
+    setLoadingCards(false);
+  }
+
+  useEffect(() => {
+    if (access.role === "super_admin") loadCardsWithStamps();
+  }, [access.role]);
 
   useEffect(() => {
     if (!scanning) return;
@@ -137,6 +191,7 @@ export default function AdminStampsPage() {
           : r
       )
     );
+    if (access.role === "super_admin") loadCardsWithStamps();
   }
 
   return (
@@ -227,6 +282,69 @@ export default function AdminStampsPage() {
           <p className="text-sm text-stone-500">No verified customers matched that search.</p>
         )}
       </div>
+
+      {access.role === "super_admin" && (
+        <div className="mt-10">
+          <h3 className="font-serif text-lg text-[#2D5A27]">Customers with Stamps</h3>
+          <p className="mt-1 text-sm text-stone-500">
+            Every customer who has earned at least one stamp, with the date of each qualifying order.
+          </p>
+
+          {loadingCards ? (
+            <p className="mt-4 text-sm text-stone-500">Loading…</p>
+          ) : cardsWithStamps.length === 0 ? (
+            <p className="mt-4 text-sm text-stone-500">No customer has earned a stamp yet.</p>
+          ) : (
+            <div className="mt-4 flex flex-col gap-3">
+              {cardsWithStamps.map((c) => (
+                <div key={c.cardId} className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-stone-900">{c.fullName}</p>
+                      <p className="text-sm text-stone-500">{c.phoneNumber ?? "—"}</p>
+                    </div>
+                    <span className="text-sm font-medium text-[#2D5A27]">{c.stampCount} / 10 stamps</span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-10 gap-1.5">
+                    {Array.from({ length: 10 }, (_, i) => (
+                      <div
+                        key={i}
+                        className={`flex aspect-square items-center justify-center rounded-full text-[10px] font-medium ${
+                          i < c.stampCount
+                            ? "bg-[#2D5A27] text-[#F9F6F0]"
+                            : "border border-dashed border-stone-300 text-stone-300"
+                        }`}
+                      >
+                        {i < c.stampCount ? "☕" : i + 1}
+                      </div>
+                    ))}
+                  </div>
+
+                  {c.stampDates.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5 border-t border-stone-100 pt-3">
+                      {c.stampDates.map((d, i) => (
+                        <span
+                          key={i}
+                          className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] text-stone-600"
+                          title={`Stamp #${i + 1}`}
+                        >
+                          {new Date(d).toLocaleString("en-PH", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
