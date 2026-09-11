@@ -11,7 +11,8 @@ const branches = [
     name: "Palindan Branch",
     address: "Old Alternate Route, Palindan",
     hours: "10:00 AM – 12:00 MN",
-    mapQuery: "Old Alternate Route, Palindan, Ibaan, Batangas",
+    // Exact coordinates from the verified "Sip & Savor Spot - Palindan" listing.
+    mapQuery: "13.825266,121.132656",
   },
   {
     name: "Uptown Branch",
