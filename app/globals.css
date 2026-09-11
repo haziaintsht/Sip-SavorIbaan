@@ -65,3 +65,19 @@ body {
     animation: none;
   }
 }
+
+/* Social icon buttons — icon slides in from the top on hover. */
+@keyframes social-icon-in {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.social-icon-btn:hover .social-icon-svg {
+  animation: social-icon-in 0.3s both;
+}

@@ -5,12 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-const SOCIALS = [
-  { label: "Facebook", href: "https://www.facebook.com/profile.php?id=61562860304155" },
-  { label: "Instagram", href: "https://www.instagram.com/sipnsavorspot" },
-  { label: "TikTok", href: "https://www.tiktok.com/@sipandsavorspot?_r=1&_t=ZS-99cLFRi93mG" },
-];
+import SocialIcons from "@/components/SocialIcons";
 
 const BRANCHES = [
   { name: "Palindan Branch", address: "Old Alternate Route, Palindan", hours: "10:00 AM – 12:00 MN" },
@@ -81,13 +76,7 @@ export default function Footer() {
       <div className="border-t border-[#F9F6F0]/10 px-6 py-4">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 text-xs text-[#F9F6F0]/60 sm:flex-row">
           <p>© {new Date().getFullYear()} Sip &amp; Savor Spot. All rights reserved.</p>
-          <div className="flex gap-3">
-            {SOCIALS.map((s) => (
-              <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="hover:text-[#F9F6F0] hover:underline">
-                {s.label}
-              </a>
-            ))}
-          </div>
+          <SocialIcons />
         </div>
       </div>
     </footer>
