@@ -261,7 +261,7 @@ export default function AdminMenuPage() {
 
         {!loading &&
           visibleItems.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-stone-200 bg-white p-5">
+            <div key={item.id} className="rounded-2xl border border-stone-200 bg-white shadow-sm p-5">
               {editingId === item.id && editDraft ? (
                 <div className="grid gap-3 sm:grid-cols-3">
                   {access.isBranchLocked ? (

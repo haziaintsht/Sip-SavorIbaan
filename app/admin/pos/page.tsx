@@ -670,7 +670,7 @@ export default function AdminPOSPage() {
                 return (
                   <div
                     key={item.id}
-                    className="flex flex-col gap-2 rounded-2xl border border-stone-200 bg-white p-4"
+                    className="flex flex-col gap-2 rounded-2xl border border-stone-200 bg-white shadow-sm p-4"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-stone-900">{item.name}</p>
@@ -830,7 +830,7 @@ export default function AdminPOSPage() {
         </div>
 
         {/* Order / cart panel */}
-        <div className="h-fit self-start rounded-2xl border border-stone-200 bg-white p-5 md:sticky md:top-6 md:max-h-[calc(100vh-3rem)] md:overflow-y-auto">
+        <div className="h-fit self-start rounded-2xl border border-stone-200 bg-white shadow-sm p-5 md:sticky md:top-6 md:max-h-[calc(100vh-3rem)] md:overflow-y-auto">
           <h3 className="font-serif text-lg text-[#2D5A27]">Current Order</h3>
 
           <div className="mt-3 flex flex-col gap-2">

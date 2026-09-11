@@ -66,7 +66,7 @@ export default function NewMenuItemPage() {
         field to override the displayed price entirely (e.g. &quot;+₱20&quot;).
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-6 grid max-w-2xl gap-3 rounded-2xl border border-stone-200 bg-white p-6 sm:grid-cols-2">
+      <form onSubmit={handleSubmit} className="mt-6 grid max-w-2xl gap-3 rounded-2xl border border-stone-200 bg-white shadow-sm p-6 sm:grid-cols-2">
         {access.isBranchLocked ? (
           <span className="input flex items-center sm:col-span-2">{form.branch} Branch</span>
         ) : (

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { Star, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatMenuPrice } from "@/lib/menuPrice";
 
@@ -153,9 +154,7 @@ export default function MenuPage() {
           className="text-[#2D5A27] transition hover:scale-110"
           title="tap thrice for something special"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2l2.9 6.3L21.5 9l-5 4.9 1.2 7.1L12 17.8 6.3 21l1.2-7.1-5-4.9 6.6-.7L12 2z" />
-          </svg>
+          <Star size={22} fill="currentColor" />
         </button>
         <h1 className="text-center font-serif text-4xl text-[#2D5A27]">Our Menu</h1>
       </div>
@@ -289,9 +288,7 @@ export default function MenuPage() {
                 aria-label="Close"
                 className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-stone-600 shadow-sm hover:text-[#2D5A27]"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M6 6l12 12M6 18 18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
+                <X size={16} />
               </button>
             </div>
 

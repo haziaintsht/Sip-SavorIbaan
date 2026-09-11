@@ -34,7 +34,7 @@ export default async function AdminCustomersPage() {
 
       {error && <p className="mt-4 text-sm text-red-600">Couldn&apos;t load customers.</p>}
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-stone-200 bg-white">
+      <div className="mt-6 overflow-x-auto rounded-2xl border border-stone-200 bg-white shadow-sm">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-stone-200 text-stone-500">
             <tr>

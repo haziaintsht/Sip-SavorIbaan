@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Menu as MenuIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type Role = "customer" | "admin" | "super_admin" | null;
@@ -138,14 +139,7 @@ export default function Navbar({
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d={open ? "M6 6l12 12M6 18 18 6" : "M4 7h16M4 12h16M4 17h16"}
-              stroke="#2D5A27"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </svg>
+          {open ? <X size={22} className="text-[#2D5A27]" /> : <MenuIcon size={22} className="text-[#2D5A27]" />}
         </button>
       </nav>
 

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { Wallet, ShoppingBag, Gift, Users, Award, Trophy } from "lucide-react";
 
 function startOfTodayISO() {
   const d = new Date();
@@ -48,6 +49,7 @@ export default async function AdminOverviewPage() {
     }
     return [...byName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
   })();
+  const topSellerQty = bestSellers[0]?.[1] ?? 0;
 
   const logs = todayLogs ?? [];
   const stampsToday = logs.filter((l) => l.action === "ADD_STAMP").length;
@@ -77,29 +79,45 @@ export default async function AdminOverviewPage() {
     entry.revenue += Number(o.total);
   }
 
+  const todayLabel = new Date().toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric" });
+
   const stats = [
-    { label: "Revenue today", value: `₱${revenueToday.toFixed(2)}` },
-    { label: "Orders today", value: ordersToday },
-    { label: "Stamps given today", value: stampsToday },
-    { label: "Total customers", value: customerCount ?? 0 },
-    { label: "Rewards redeemed today", value: redeemsToday },
-    { label: "Rewards redeemed (all time)", value: rewardsRedeemedTotal ?? 0 },
+    { label: "Revenue today", value: `₱${revenueToday.toFixed(2)}`, icon: Wallet },
+    { label: "Orders today", value: ordersToday, icon: ShoppingBag },
+    { label: "Stamps given today", value: stampsToday, icon: Gift },
+    { label: "Total customers", value: customerCount ?? 0, icon: Users },
+    { label: "Rewards redeemed today", value: redeemsToday, icon: Award },
+    { label: "Rewards redeemed (all time)", value: rewardsRedeemedTotal ?? 0, icon: Trophy },
   ];
+
+  const medalStyles = ["bg-amber-400 text-amber-950", "bg-stone-300 text-stone-700", "bg-amber-700 text-amber-50"];
 
   return (
     <div>
-      <h2 className="font-serif text-2xl text-[#2D5A27]">Overview</h2>
-      <p className="mt-1 text-sm text-stone-600">
-        {isBranchLocked ? `Today at a glance — ${myProfile?.branch}.` : "Today at a glance."}
+      <p className="text-xs font-medium uppercase tracking-widest text-[#2D5A27]/50">{todayLabel}</p>
+      <h2 className="mt-1 font-serif text-3xl text-[#2D5A27]">Overview</h2>
+      <p className="mt-1 text-sm text-stone-500">
+        {isBranchLocked ? `Today at a glance — ${myProfile?.branch}.` : "Today at a glance across both branches."}
       </p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-2xl border border-stone-200 bg-white p-5">
-            <p className="text-2xl font-semibold text-[#2D5A27]">{s.value}</p>
-            <p className="mt-1 text-sm text-stone-500">{s.label}</p>
-          </div>
-        ))}
+      <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <div
+              key={s.label}
+              className="group flex items-start justify-between rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div>
+                <p className="text-2xl font-semibold text-[#2D5A27]">{s.value}</p>
+                <p className="mt-1 text-sm text-stone-500">{s.label}</p>
+              </div>
+              <div className="rounded-full bg-[#2D5A27]/10 p-2.5 text-[#2D5A27] transition group-hover:bg-[#2D5A27] group-hover:text-[#F9F6F0]">
+                <Icon size={18} strokeWidth={2} />
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">Today&apos;s Best Sellers</h3>
@@ -108,12 +126,27 @@ export default async function AdminOverviewPage() {
       ) : (
         <div className="mt-4 flex flex-col gap-2">
           {bestSellers.map(([name, qty], i) => (
-            <div key={name} className="flex items-center justify-between rounded-2xl border border-stone-200 bg-white px-5 py-3">
-              <span className="text-stone-900">
-                <span className="mr-2 text-stone-400">#{i + 1}</span>
-                {name}
+            <div
+              key={name}
+              className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white px-5 py-3.5 shadow-sm transition hover:shadow-md"
+            >
+              <span
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                  medalStyles[i] ?? "bg-[#2D5A27]/10 text-[#2D5A27]"
+                }`}
+              >
+                {i + 1}
               </span>
-              <span className="font-medium text-[#2D5A27]">{qty} sold</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-stone-900">{name}</p>
+                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-stone-100">
+                  <div
+                    className="h-full rounded-full bg-[#2D5A27]"
+                    style={{ width: `${topSellerQty ? (qty / topSellerQty) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+              <span className="shrink-0 text-sm font-medium text-[#2D5A27]">{qty} sold</span>
             </div>
           ))}
         </div>
@@ -121,35 +154,35 @@ export default async function AdminOverviewPage() {
 
       {!isBranchLocked && (
         <>
-      <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">Today by branch</h3>
-      {byBranch.size === 0 ? (
-        <p className="mt-3 text-sm text-stone-500">No activity yet today.</p>
-      ) : (
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-stone-200 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-stone-200 text-stone-500">
-              <tr>
-                <th className="px-5 py-3 font-medium">Branch</th>
-                <th className="px-5 py-3 font-medium">Orders</th>
-                <th className="px-5 py-3 font-medium">Revenue</th>
-                <th className="px-5 py-3 font-medium">Stamps added</th>
-                <th className="px-5 py-3 font-medium">Rewards redeemed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...byBranch.entries()].map(([branch, counts]) => (
-                <tr key={branch} className="border-b border-stone-100 last:border-0">
-                  <td className="px-5 py-3 text-stone-900">{branch}</td>
-                  <td className="px-5 py-3 text-stone-700">{counts.orders}</td>
-                  <td className="px-5 py-3 text-stone-700">₱{counts.revenue.toFixed(2)}</td>
-                  <td className="px-5 py-3 text-stone-700">{counts.stamps}</td>
-                  <td className="px-5 py-3 text-stone-700">{counts.redeems}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+          <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">Today by branch</h3>
+          {byBranch.size === 0 ? (
+            <p className="mt-3 text-sm text-stone-500">No activity yet today.</p>
+          ) : (
+            <div className="mt-4 overflow-hidden overflow-x-auto rounded-2xl border border-stone-200 bg-white shadow-sm">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-[#2D5A27]/5 text-stone-500">
+                  <tr>
+                    <th className="px-5 py-3 font-medium">Branch</th>
+                    <th className="px-5 py-3 font-medium">Orders</th>
+                    <th className="px-5 py-3 font-medium">Revenue</th>
+                    <th className="px-5 py-3 font-medium">Stamps added</th>
+                    <th className="px-5 py-3 font-medium">Rewards redeemed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...byBranch.entries()].map(([branch, counts]) => (
+                    <tr key={branch} className="border-t border-stone-100 transition hover:bg-stone-50">
+                      <td className="px-5 py-3 font-medium text-stone-900">{branch}</td>
+                      <td className="px-5 py-3 text-stone-700">{counts.orders}</td>
+                      <td className="px-5 py-3 font-medium text-[#2D5A27]">₱{counts.revenue.toFixed(2)}</td>
+                      <td className="px-5 py-3 text-stone-700">{counts.stamps}</td>
+                      <td className="px-5 py-3 text-stone-700">{counts.redeems}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
     </div>

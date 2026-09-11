@@ -182,7 +182,7 @@ export default function AdminStampsPage() {
       </form>
 
       {scanning && (
-        <div className="mt-4 max-w-sm rounded-2xl border border-stone-200 bg-white p-4">
+        <div className="mt-4 max-w-sm rounded-2xl border border-stone-200 bg-white shadow-sm p-4">
           <div id={SCANNER_ELEMENT_ID} />
           <p className="mt-2 text-xs text-stone-500">
             Point the camera at the customer&apos;s loyalty QR code.
@@ -197,7 +197,7 @@ export default function AdminStampsPage() {
         {results.map((customer) => (
           <div
             key={customer.id}
-            className="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white shadow-sm p-5 sm:flex-row sm:items-center sm:justify-between"
           >
             <div>
               <p className="font-medium text-stone-900">{customer.full_name}</p>

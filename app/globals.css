@@ -27,11 +27,11 @@ body {
   }
 
   .chip {
-    @apply rounded-full border border-stone-300 px-3.5 py-1.5 text-xs text-stone-600 transition hover:border-[#2D5A27];
+    @apply rounded-full border border-stone-300 px-3.5 py-1.5 text-xs text-stone-600 transition hover:border-[#2D5A27] hover:text-[#2D5A27];
   }
 
   .chip-active {
-    @apply border-[#2D5A27] bg-[#2D5A27] text-[#F9F6F0];
+    @apply border-[#2D5A27] bg-[#2D5A27] text-[#F9F6F0] shadow-sm hover:text-[#F9F6F0];
   }
 
   .no-scrollbar {

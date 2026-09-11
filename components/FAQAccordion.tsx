@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Plus } from "lucide-react";
 
 const FAQS = [
   {
@@ -48,12 +49,11 @@ export default function FAQAccordion() {
               className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left"
             >
               <span className="font-medium text-stone-900">{item.q}</span>
-              <span
+              <Plus
+                size={18}
                 className={`shrink-0 text-[#2D5A27] transition-transform duration-200 ${open ? "rotate-45" : ""}`}
                 aria-hidden="true"
-              >
-                +
-              </span>
+              />
             </button>
             <div
               className={`grid overflow-hidden px-6 text-sm text-stone-600 transition-all duration-300 ease-out ${

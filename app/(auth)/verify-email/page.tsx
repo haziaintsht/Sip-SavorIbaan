@@ -1,15 +1,4 @@
-function MailIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="text-[#2D5A27]">
-      <path
-        d="M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-11Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path d="m4 7 8 6 8-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
+import { Mail } from "lucide-react";
 
 export default async function VerifyEmailPage({
   searchParams,
@@ -20,7 +9,7 @@ export default async function VerifyEmailPage({
 
   return (
     <main className="mx-auto flex min-h-[80vh] max-w-md flex-col items-center justify-center px-6 py-12 text-center">
-      <MailIcon />
+      <Mail size={48} strokeWidth={1.5} className="text-[#2D5A27]" />
       <h1 className="mt-6 font-serif text-2xl text-[#2D5A27]">Check your inbox</h1>
       <p className="mt-3 text-sm leading-relaxed text-stone-600">
         We sent a verification link to{" "}

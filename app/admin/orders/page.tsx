@@ -250,11 +250,11 @@ export default function AdminOrdersPage() {
       />
 
       <div className="mt-4 flex flex-wrap gap-4">
-        <div className="rounded-2xl border border-stone-200 bg-white px-5 py-3">
+        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm px-5 py-3">
           <p className="text-xs uppercase tracking-wide text-stone-500">Orders shown</p>
           <p className="mt-1 text-xl font-medium text-[#2D5A27]">{summary.count}</p>
         </div>
-        <div className="rounded-2xl border border-stone-200 bg-white px-5 py-3">
+        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm px-5 py-3">
           <p className="text-xs uppercase tracking-wide text-stone-500">Revenue (completed)</p>
           <p className="mt-1 text-xl font-medium text-[#2D5A27]">₱{summary.revenue.toFixed(2)}</p>
         </div>
@@ -262,7 +262,7 @@ export default function AdminOrdersPage() {
 
       {error && <p className="mt-4 text-sm text-red-600">Couldn&apos;t load orders: {error}</p>}
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-stone-200 bg-white">
+      <div className="mt-6 overflow-x-auto rounded-2xl border border-stone-200 bg-white shadow-sm">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-stone-200 text-stone-500">
             <tr>
