@@ -84,7 +84,7 @@ export default async function HomePage() {
               href="/register"
               className="rounded-full border border-[#F9F6F0]/60 px-7 py-3 text-sm font-medium text-[#F9F6F0] transition hover:scale-105 hover:bg-[#F9F6F0]/10"
             >
-              Join the loyalty program
+              Join us and sign up!
             </Link>
           </div>
         </Reveal>

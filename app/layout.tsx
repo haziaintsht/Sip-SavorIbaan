@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BfcacheGuard from "@/components/BfcacheGuard";
 import { createClient } from "@/lib/supabase/server";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable}`}>
       <body className="bg-[#F9F6F0] font-sans text-stone-800" suppressHydrationWarning>
+        <BfcacheGuard />
         <Navbar initialLoggedIn={!!user} initialRole={role} />
         {children}
         <Footer />
