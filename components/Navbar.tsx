@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu as MenuIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { clearRememberPreference } from "@/lib/rememberMe";
 
 type Role = "customer" | "admin" | "super_admin" | null;
 
@@ -68,6 +69,7 @@ export default function Navbar({
   }, [pathname]);
 
   async function handleLogout() {
+    clearRememberPreference();
     await supabase.auth.signOut();
     window.location.href = "/";
   }

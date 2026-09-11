@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { setRememberPreference } from "@/lib/rememberMe";
 import SignInOverlay from "@/components/SignInOverlay";
 
 export default function LoginPage() {
@@ -12,6 +13,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [overlayPhase, setOverlayPhase] = useState<"loading" | "success" | null>(null);
   const [error, setError] = useState<string | null>(
@@ -58,6 +60,7 @@ export default function LoginPage() {
     const isStaff = profile?.role === "admin" || profile?.role === "super_admin";
     const redirectTo = searchParams.get("redirectTo");
 
+    setRememberPreference(rememberMe);
     setOverlayPhase("success");
     setTimeout(() => {
       router.push(redirectTo ?? (isStaff ? "/admin" : "/dashboard"));
@@ -97,6 +100,16 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="input"
           />
+        </label>
+
+        <label className="flex items-center gap-2 text-sm text-stone-700">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="h-4 w-4 rounded border-stone-300 text-[#2D5A27] focus:ring-[#2D5A27]"
+          />
+          Remember me
         </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

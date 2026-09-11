@@ -177,7 +177,8 @@ export default function DashboardPage() {
       <Toast toast={toast} onDismiss={() => setToast(null)} />
       <h1 className="font-serif text-3xl text-[#2D5A27]">Hi, {fullName || "there"}</h1>
       <p className="mt-1 text-sm text-stone-600">
-        Show your QR code at the counter to earn a stamp with every qualifying order.
+        Show your QR code at the counter to earn a stamp with every qualifying order — or just tell us your
+        name and we&apos;ll add the stamp to your account.
       </p>
 
       <div className="mt-8 flex flex-col items-center gap-3 rounded-3xl border border-[#2D5A27]/15 bg-white p-6">
@@ -195,7 +196,7 @@ export default function DashboardPage() {
 
       <section className="mt-10">
         <h2 className="font-serif text-lg text-[#2D5A27]">Recent activity</h2>
-        <ul className="mt-3 divide-y divide-stone-100">
+        <ul className="mt-3 max-h-80 divide-y divide-stone-100 overflow-y-auto pr-1">
           {logs.length === 0 && (
             <li className="py-3 text-sm text-stone-500">No stamps yet — your first order starts the card.</li>
           )}
@@ -220,7 +221,7 @@ export default function DashboardPage() {
 
       <section className="mt-10">
         <h2 className="font-serif text-lg text-[#2D5A27]">Your orders</h2>
-        <ul className="mt-3 divide-y divide-stone-100">
+        <ul className="mt-3 max-h-96 divide-y divide-stone-100 overflow-y-auto pr-1">
           {orders.length === 0 && (
             <li className="py-3 text-sm text-stone-500">No orders yet — your first visit will show up here.</li>
           )}

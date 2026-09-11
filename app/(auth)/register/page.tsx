@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -13,6 +14,7 @@ export default function RegisterPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [location, setLocation] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,11 +107,31 @@ export default function RegisterPage() {
           />
         </Field>
 
+        <label className="flex items-start gap-2 text-sm text-stone-700">
+          <input
+            required
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 text-[#2D5A27] focus:ring-[#2D5A27]"
+          />
+          <span>
+            I accept the{" "}
+            <Link href="/terms" target="_blank" className="text-[#2D5A27] underline">
+              Terms of Use
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" target="_blank" className="text-[#2D5A27] underline">
+              Privacy Notice
+            </Link>
+          </span>
+        </label>
+
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !acceptedTerms}
           className="mt-2 rounded-full bg-[#2D5A27] px-6 py-3 text-sm font-medium text-[#F9F6F0] disabled:opacity-60"
         >
           {loading ? "Creating account..." : "Create account"}

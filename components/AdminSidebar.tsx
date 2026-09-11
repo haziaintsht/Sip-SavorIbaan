@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
+import { clearRememberPreference } from "@/lib/rememberMe";
 import type { LucideIcon } from "lucide-react";
 
 type NavItem = {
@@ -81,6 +82,7 @@ export default function AdminSidebar() {
   }, [pathname]);
 
   async function handleLogout() {
+    clearRememberPreference();
     await supabase.auth.signOut();
     window.location.href = "/";
   }
