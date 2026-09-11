@@ -6,6 +6,7 @@ import { useAdminAccess } from "@/lib/useAdminAccess";
 import { Download } from "lucide-react";
 import ReceiptModal from "@/components/ReceiptModal";
 import type { ReceiptData } from "@/components/Receipt";
+import CoffeeLoader from "@/components/CoffeeLoader";
 
 function toCsvValue(v: string | number) {
   const s = String(v);
@@ -323,8 +324,8 @@ export default function AdminOrdersPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-stone-500">
-                  Loading…
+                <td colSpan={9} className="px-4 py-8">
+                  <CoffeeLoader size={36} label={null} />
                 </td>
               </tr>
             ) : visibleOrders.length === 0 ? (

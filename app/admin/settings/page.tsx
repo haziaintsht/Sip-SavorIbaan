@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
+import CoffeeLoader from "@/components/CoffeeLoader";
 
 type BranchInfo = {
   branch: "Palindan" | "Uptown";
@@ -81,7 +82,7 @@ export default function AdminSettingsPage() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       {loading ? (
-        <p className="mt-6 text-sm text-stone-500">Loading…</p>
+        <CoffeeLoader className="mt-6" size={56} />
       ) : (
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
           {branches.map((b) => (

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import SignInOverlay from "@/components/SignInOverlay";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [overlayPhase, setOverlayPhase] = useState<"loading" | "success" | null>(null);
   const [error, setError] = useState<string | null>(
     searchParams.get("error") === "verification_failed"
       ? "That verification link is invalid or expired. Please sign up again or request a new one."
@@ -22,6 +24,7 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setOverlayPhase("loading");
     setError(null);
 
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -32,6 +35,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (signInError) {
+      setOverlayPhase(null);
       setError(
         signInError.message.includes("Email not confirmed")
           ? "Please verify your email before logging in."
@@ -40,7 +44,10 @@ export default function LoginPage() {
       return;
     }
 
-    if (!data.user) return;
+    if (!data.user) {
+      setOverlayPhase(null);
+      return;
+    }
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -50,8 +57,12 @@ export default function LoginPage() {
 
     const isStaff = profile?.role === "admin" || profile?.role === "super_admin";
     const redirectTo = searchParams.get("redirectTo");
-    router.push(redirectTo ?? (isStaff ? "/admin" : "/dashboard"));
-    router.refresh();
+
+    setOverlayPhase("success");
+    setTimeout(() => {
+      router.push(redirectTo ?? (isStaff ? "/admin" : "/dashboard"));
+      router.refresh();
+    }, 900);
   }
 
   return (
@@ -98,6 +109,8 @@ export default function LoginPage() {
           {loading ? "Logging in..." : "Log in"}
         </button>
       </form>
+
+      {overlayPhase && <SignInOverlay phase={overlayPhase} />}
     </main>
   );
 }

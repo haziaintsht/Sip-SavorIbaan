@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Download } from "lucide-react";
+import CoffeeLoader from "@/components/CoffeeLoader";
 
 type CustomerRow = {
   id: string;
@@ -180,8 +181,8 @@ export default function AdminCustomersPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-5 py-8 text-center text-stone-500">
-                  Loading…
+                <td colSpan={7} className="px-5 py-8">
+                  <CoffeeLoader size={36} label={null} />
                 </td>
               </tr>
             ) : (

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatMenuPrice } from "@/lib/menuPrice";
 import MenuImageInput from "@/components/MenuImageInput";
+import CoffeeLoader from "@/components/CoffeeLoader";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import { BRANCHES, priceFieldsFromForm, hasAnyPrice, type Branch, type FormState } from "./shared";
 
@@ -257,7 +258,7 @@ export default function AdminMenuPage() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <div className="mt-6 flex flex-col gap-3">
-        {loading && <p className="text-sm text-stone-500">Loading menu…</p>}
+        {loading && <CoffeeLoader label="Loading menu…" size={56} />}
 
         {!loading &&
           visibleItems.map((item) => (

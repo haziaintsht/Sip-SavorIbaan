@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Star, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatMenuPrice } from "@/lib/menuPrice";
+import CoffeeLoader from "@/components/CoffeeLoader";
 
 const SECRET_CODE = "SIPNSAVOR";
 
@@ -212,7 +213,7 @@ export default function MenuPage() {
         </div>
       )}
 
-      {loading && <p className="mt-10 text-center text-sm text-stone-500">Loading the menu…</p>}
+      {loading && <CoffeeLoader label="Loading the menu…" className="mt-10" />}
 
       {!loading && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

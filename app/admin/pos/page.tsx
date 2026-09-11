@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import ReceiptModal from "@/components/ReceiptModal";
 import type { ReceiptData } from "@/components/Receipt";
+import CoffeeLoader from "@/components/CoffeeLoader";
 
 type Branch = "Palindan" | "Uptown";
 const BRANCHES: Branch[] = ["Palindan", "Uptown"];
@@ -657,7 +658,7 @@ export default function AdminPOSPage() {
           </div>
 
           {loadingMenu ? (
-            <p className="mt-6 text-sm text-stone-500">Loading menu…</p>
+            <CoffeeLoader label="Loading menu…" className="mt-6" />
           ) : (
             <div className="mt-4 flex flex-col gap-3">
               {visibleItems.map((item) => {
@@ -749,7 +750,7 @@ export default function AdminPOSPage() {
               </button>
             </div>
             {loadingOrders ? (
-              <p className="mt-2 text-sm text-stone-500">Loading…</p>
+              <CoffeeLoader size={40} label={null} className="mt-2" />
             ) : recentOrders.length === 0 ? (
               <p className="mt-2 text-sm text-stone-500">No orders yet today.</p>
             ) : (

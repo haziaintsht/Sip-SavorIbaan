@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import CoffeeLoader from "@/components/CoffeeLoader";
 
 type ClosetoutRow = {
   id: string;
@@ -97,8 +98,8 @@ export default function AdminShiftsPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-5 py-8 text-center text-stone-500">
-                  Loading…
+                <td colSpan={8} className="px-5 py-8">
+                  <CoffeeLoader size={36} label={null} />
                 </td>
               </tr>
             ) : (

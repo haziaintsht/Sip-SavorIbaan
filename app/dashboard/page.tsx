@@ -7,6 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import LoyaltyCard from "@/components/LoyaltyCard";
 import Toast, { type ToastData } from "@/components/Toast";
+import CoffeeLoader from "@/components/CoffeeLoader";
 
 type LoyaltyCardRow = {
   id: string;
@@ -156,7 +157,11 @@ export default function DashboardPage() {
   }, [supabase]);
 
   if (loading) {
-    return <main className="px-6 py-24 text-center text-sm text-stone-500">Loading your card...</main>;
+    return (
+      <main className="px-6 py-24">
+        <CoffeeLoader label="Loading your card..." />
+      </main>
+    );
   }
 
   if (!card || !userId) {

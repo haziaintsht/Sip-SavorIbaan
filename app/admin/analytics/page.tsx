@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
+import CoffeeLoader from "@/components/CoffeeLoader";
 
 type RangeKey = "7d" | "30d";
 
@@ -110,7 +111,7 @@ export default function AdminAnalyticsPage() {
 
       <div className="mt-3 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
         {loading ? (
-          <p className="text-sm text-stone-500">Loading…</p>
+          <CoffeeLoader size={56} />
         ) : maxDay === 0 ? (
           <p className="text-sm text-stone-500">No completed orders in this period.</p>
         ) : (

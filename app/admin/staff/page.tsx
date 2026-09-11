@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import { UserPlus, KeyRound, Ban, CheckCircle2 } from "lucide-react";
+import CoffeeLoader from "@/components/CoffeeLoader";
 
 type StaffRow = {
   id: string;
@@ -218,7 +219,7 @@ export default function AdminStaffPage() {
 
       <div className="mt-6 flex flex-col gap-3">
         {loading ? (
-          <p className="text-sm text-stone-500">Loading…</p>
+          <CoffeeLoader size={56} />
         ) : (
           staff.map((s) => (
             <div key={s.id} className={`rounded-2xl border bg-white p-5 shadow-sm ${s.banned ? "border-red-200 opacity-70" : "border-stone-200"}`}>
