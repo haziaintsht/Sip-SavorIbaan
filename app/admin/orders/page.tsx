@@ -8,6 +8,8 @@ type Branch = "Palindan" | "Uptown";
 type DateRange = "today" | "7d" | "30d" | "all";
 type StatusFilter = "all" | "completed" | "voided";
 
+type OrderItem = { key: string; name: string; unitPrice: number; quantity: number };
+
 type OrderRow = {
   id: string;
   created_at: string;
@@ -21,6 +23,24 @@ type OrderRow = {
   customer_name: string | null;
   staff_name: string | null;
   item_summary: string;
+  items: OrderItem[];
+  discount_reason: string | null;
+  discount_note: string | null;
+};
+
+type ReceiptData = {
+  id: string;
+  createdAt: string;
+  branch: string;
+  items: OrderItem[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  paymentMethod: string;
+  customerName: string | null;
+  discountReason: string | null;
+  discountNote: string | null;
 };
 
 function rangeStart(range: DateRange): string | null {
@@ -50,6 +70,7 @@ export default function AdminOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState(50);
   const [hasMore, setHasMore] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
 
   async function load() {
     setLoading(true);
@@ -58,7 +79,7 @@ export default function AdminOrdersPage() {
     let query = supabase
       .from("orders")
       .select(
-        "id, created_at, branch, subtotal, discount, tax, total, payment_method, status, customer:profiles!orders_customer_id_fkey(full_name), staff:profiles!orders_admin_id_fkey(full_name), order_items(name, quantity)"
+        "id, created_at, branch, subtotal, discount, tax, total, payment_method, status, discount_reason, discount_note, customer:profiles!orders_customer_id_fkey(full_name), staff:profiles!orders_admin_id_fkey(full_name), order_items(name, quantity, unit_price)"
       )
       .order("created_at", { ascending: false })
       .limit(limit + 1);
@@ -93,6 +114,14 @@ export default function AdminOrdersPage() {
         customer_name: o.customer?.full_name ?? null,
         staff_name: o.staff?.full_name ?? null,
         item_summary: (o.order_items ?? []).map((i: any) => `${i.quantity}x ${i.name}`).join(", "),
+        items: (o.order_items ?? []).map((i: any, idx: number) => ({
+          key: `${i.name}-${idx}`,
+          name: i.name,
+          unitPrice: Number(i.unit_price),
+          quantity: i.quantity,
+        })),
+        discount_reason: o.discount_reason ?? null,
+        discount_note: o.discount_note ?? null,
       }))
     );
     setLoading(false);
@@ -128,6 +157,24 @@ export default function AdminOrdersPage() {
     };
   }, [visibleOrders]);
 
+  function viewReceipt(o: OrderRow) {
+    setReceipt({
+      id: o.id,
+      createdAt: o.created_at,
+      branch: o.branch,
+      items: o.items,
+      subtotal: Number(o.subtotal),
+      discount: Number(o.discount),
+      tax: Number(o.tax),
+      total: Number(o.total),
+      paymentMethod: o.payment_method,
+      customerName: o.customer_name,
+      discountReason: o.discount_reason,
+      discountNote: o.discount_note,
+    });
+    setTimeout(() => window.print(), 50);
+  }
+
   async function voidOrder(id: string) {
     if (!confirm("Void this order? It will be excluded from sales totals.")) return;
     const { error } = await supabase.from("orders").update({ status: "voided" }).eq("id", id);
@@ -140,6 +187,7 @@ export default function AdminOrdersPage() {
 
   return (
     <div>
+      <div className="print:hidden">
       <h2 className="font-serif text-2xl text-[#2D5A27]">Orders</h2>
       <p className="mt-1 text-sm text-stone-600">
         {access.isBranchLocked ? `Order history for ${access.branch}.` : "Full order history across both branches."}
@@ -277,9 +325,12 @@ export default function AdminOrdersPage() {
                       {o.status === "voided" ? "Voided" : "Completed"}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <button onClick={() => viewReceipt(o)} className="text-xs text-stone-500 hover:underline">
+                      View Receipt
+                    </button>
                     {o.status === "completed" && access.isBranchLocked && (
-                      <button onClick={() => voidOrder(o.id)} className="text-xs text-red-500 hover:underline">
+                      <button onClick={() => voidOrder(o.id)} className="ml-3 text-xs text-red-500 hover:underline">
                         Void
                       </button>
                     )}
@@ -298,6 +349,54 @@ export default function AdminOrdersPage() {
         >
           Load more
         </button>
+      )}
+      </div>
+
+      {/* Print-only receipt — hidden on screen, shown only when printing */}
+      {receipt && (
+        <div className="hidden print:block">
+          <div className="mx-auto max-w-xs font-mono text-xs text-black">
+            <p className="text-center text-sm font-bold">SIP &amp; SAVOR SPOT</p>
+            <p className="text-center">{receipt.branch} Branch</p>
+            <p className="text-center">{new Date(receipt.createdAt).toLocaleString("en-PH")}</p>
+            <p className="mt-1 text-center">Order #{receipt.id.slice(0, 8)}</p>
+            <div className="my-2 border-t border-dashed border-black" />
+            {receipt.items.map((l) => (
+              <div key={l.key} className="flex justify-between">
+                <span>
+                  {l.quantity}x {l.name}
+                </span>
+                <span>₱{(l.unitPrice * l.quantity).toFixed(2)}</span>
+              </div>
+            ))}
+            <div className="my-2 border-t border-dashed border-black" />
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>₱{receipt.subtotal.toFixed(2)}</span>
+            </div>
+            {receipt.discount > 0 && (
+              <div className="flex justify-between">
+                <span>Discount{receipt.discountReason ? ` (${receipt.discountReason})` : ""}</span>
+                <span>−₱{receipt.discount.toFixed(2)}</span>
+              </div>
+            )}
+            {receipt.discountNote && <p className="text-[10px]">Note: {receipt.discountNote}</p>}
+            {receipt.tax > 0 && (
+              <div className="flex justify-between">
+                <span>Tax</span>
+                <span>+₱{receipt.tax.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold">
+              <span>TOTAL</span>
+              <span>₱{receipt.total.toFixed(2)}</span>
+            </div>
+            <div className="my-2 border-t border-dashed border-black" />
+            <p>Payment: {receipt.paymentMethod}</p>
+            {receipt.customerName && <p>Customer: {receipt.customerName}</p>}
+            <p className="mt-3 text-center">Salamat po! Tara, Kape ulit! ☕</p>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -36,7 +36,7 @@ export default function AdminSidebar() {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="flex items-center justify-between border-b border-stone-200 bg-white px-4 py-3 md:hidden">
+      <div className="flex items-center justify-between border-b border-stone-200 bg-white px-4 py-3 print:hidden md:hidden">
         <div className="flex items-center gap-2">
           <Image src="/logo_sns.jpg" alt="Sip & Savor Spot" width={28} height={28} className="rounded-full" />
           <div>
@@ -74,7 +74,7 @@ export default function AdminSidebar() {
 
       {/* Sidebar: slide-in drawer on mobile, pinned in place on desktop (doesn't scroll with content) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col overflow-y-auto border-r border-stone-200 bg-white transition-transform duration-200 md:w-56 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col overflow-y-auto border-r border-stone-200 bg-white transition-transform duration-200 print:hidden md:w-56 md:translate-x-0 ${
           open ? "translate-x-0" : ""
         }`}
       >
