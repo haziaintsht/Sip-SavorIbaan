@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatMenuPrice } from "@/lib/menuPrice";
 import Reveal from "@/components/Reveal";
 import FAQAccordion from "@/components/FAQAccordion";
+import PhotoMarquee from "@/components/PhotoMarquee";
 
 const branches = [
   {
@@ -265,6 +266,17 @@ export default async function HomePage() {
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Community photo strip */}
+      <section className="bg-[#F9F6F0] py-16">
+        <Reveal className="mx-auto max-w-6xl px-6 text-center">
+          <p className="text-sm uppercase tracking-widest text-[#2D5A27]/60">Good Company</p>
+          <h2 className="mt-1 font-serif text-3xl text-[#2D5A27]">Moments at the Spot</h2>
+        </Reveal>
+        <div className="mt-8">
+          <PhotoMarquee />
         </div>
       </section>
     </main>
