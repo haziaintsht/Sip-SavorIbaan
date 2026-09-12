@@ -16,6 +16,25 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Every button on the site gets the same tactile press feedback,
+   so it doesn't have to be applied file-by-file. Utilities layer
+   (e.g. .chip's active:scale-95, or an inline active:scale-*) still
+   wins over this base-layer default where a component wants its own. */
+@layer base {
+  button:not(:disabled) {
+    transition: transform 100ms ease;
+  }
+  button:not(:disabled):active {
+    transform: scale(0.97);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button:not(:disabled):active {
+      transform: none;
+    }
+  }
+}
+
 .font-serif {
   font-family: var(--font-serif);
 }
@@ -27,7 +46,11 @@ body {
   }
 
   .chip {
-    @apply rounded-full border border-stone-300 px-3.5 py-1.5 text-xs text-stone-600 transition hover:border-[#2D5A27] hover:text-[#2D5A27];
+    @apply rounded-full border border-stone-300 px-3.5 py-1.5 text-xs text-stone-600 transition hover:border-[#2D5A27] hover:text-[#2D5A27] active:scale-95;
+  }
+
+  .btn-press {
+    @apply transition-transform duration-100 active:scale-95;
   }
 
   .chip-active {
@@ -99,6 +122,29 @@ body {
 
 .animate-stamp-pop {
   animation: stamp-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* A gentle rise-and-fade for content that just appeared — empty states,
+   newly-loaded lists — so they don't just pop into place. */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in-up 0.35s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
 }
 
 /* Coffee cup loading animation — the site-wide loading indicator.

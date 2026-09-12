@@ -5,6 +5,7 @@ import { Coffee } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import CoffeeLoader from "@/components/CoffeeLoader";
+import EmptyState from "@/components/EmptyState";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -295,7 +296,7 @@ export default function AdminStampsPage() {
           {loadingCards ? (
             <CoffeeLoader className="mt-4" size={56} />
           ) : cardsWithStamps.length === 0 ? (
-            <p className="mt-4 text-sm text-stone-500">No customer has earned a stamp yet.</p>
+            <EmptyState icon={Coffee} message="No customer has earned a stamp yet." className="mt-4" />
           ) : (
             <div className="mt-4 flex flex-col gap-3">
               {cardsWithStamps.map((c) => (

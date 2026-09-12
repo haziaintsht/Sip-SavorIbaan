@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Coffee, PartyPopper } from "lucide-react";
+import { Coffee, PartyPopper, Receipt } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import LoyaltyCard from "@/components/LoyaltyCard";
 import Toast, { type ToastData } from "@/components/Toast";
 import CoffeeLoader from "@/components/CoffeeLoader";
+import EmptyState from "@/components/EmptyState";
 
 type LoyaltyCardRow = {
   id: string;
@@ -198,7 +199,9 @@ export default function DashboardPage() {
         <h2 className="font-serif text-lg text-[#2D5A27]">Recent activity</h2>
         <ul className="mt-3 max-h-80 divide-y divide-stone-100 overflow-y-auto pr-1">
           {logs.length === 0 && (
-            <li className="py-3 text-sm text-stone-500">No stamps yet — your first order starts the card.</li>
+            <li>
+              <EmptyState icon={Coffee} message="No stamps yet — your first order starts the card." />
+            </li>
           )}
           {logs.map((log) => (
             <li key={log.id} className="flex items-center justify-between py-3 text-sm">
@@ -223,7 +226,9 @@ export default function DashboardPage() {
         <h2 className="font-serif text-lg text-[#2D5A27]">Your orders</h2>
         <ul className="mt-3 max-h-96 divide-y divide-stone-100 overflow-y-auto pr-1">
           {orders.length === 0 && (
-            <li className="py-3 text-sm text-stone-500">No orders yet — your first visit will show up here.</li>
+            <li>
+              <EmptyState icon={Receipt} message="No orders yet — your first visit will show up here." />
+            </li>
           )}
           {orders.map((o) => (
             <li key={o.id} className="py-3 text-sm">

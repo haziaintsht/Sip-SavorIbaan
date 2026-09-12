@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -159,14 +160,23 @@ export default function AdminSidebar() {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition ${
-                          active
-                            ? "bg-[#2D5A27] font-medium text-[#F9F6F0] shadow-sm"
-                            : "text-stone-600 hover:bg-[#2D5A27]/8 hover:text-[#2D5A27]"
+                        className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors duration-300 ${
+                          active ? "font-medium text-[#F9F6F0]" : "text-stone-600 hover:bg-[#2D5A27]/8 hover:text-[#2D5A27]"
                         }`}
                       >
-                        <Icon size={17} strokeWidth={2} className={active ? "text-[#F9F6F0]" : "text-stone-400"} />
-                        {item.label}
+                        {active && (
+                          <motion.span
+                            layoutId="admin-nav-pill"
+                            className="absolute inset-0 rounded-xl bg-[#2D5A27] shadow-sm"
+                            transition={{ type: "spring", stiffness: 500, damping: 36 }}
+                          />
+                        )}
+                        <Icon
+                          size={17}
+                          strokeWidth={2}
+                          className={`relative transition-colors duration-300 ${active ? "text-[#F9F6F0]" : "text-stone-400"}`}
+                        />
+                        <span className="relative">{item.label}</span>
                       </Link>
                     );
                   })}

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useAdminAccess } from "@/lib/useAdminAccess";
-import { UserPlus, KeyRound, Ban, CheckCircle2 } from "lucide-react";
+import { UserPlus, KeyRound, Ban, CheckCircle2, UserCog } from "lucide-react";
 import CoffeeLoader from "@/components/CoffeeLoader";
+import EmptyState from "@/components/EmptyState";
 
 type StaffRow = {
   id: string;
@@ -303,7 +304,7 @@ export default function AdminStaffPage() {
         )}
 
         {!loading && staff.length === 0 && !error && (
-          <p className="text-sm text-stone-500">No staff accounts yet.</p>
+          <EmptyState icon={UserCog} message="No staff accounts yet." />
         )}
       </div>
     </div>

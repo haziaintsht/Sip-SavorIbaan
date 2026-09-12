@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Download } from "lucide-react";
+import { Download, Users } from "lucide-react";
 import CoffeeLoader from "@/components/CoffeeLoader";
+import EmptyState from "@/components/EmptyState";
 
 type CustomerRow = {
   id: string;
@@ -213,8 +214,8 @@ export default function AdminCustomersPage() {
 
             {!loading && customers.length === 0 && !error && (
               <tr>
-                <td colSpan={7} className="px-5 py-8 text-center text-stone-500">
-                  No verified customers yet.
+                <td colSpan={7}>
+                  <EmptyState icon={Users} message="No verified customers yet." />
                 </td>
               </tr>
             )}

@@ -3,10 +3,12 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Star, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { SearchX, Star, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatMenuPrice } from "@/lib/menuPrice";
 import CoffeeLoader from "@/components/CoffeeLoader";
+import EmptyState from "@/components/EmptyState";
 
 const SECRET_CODE = "SIPNSAVOR";
 
@@ -165,7 +167,7 @@ export default function MenuPage() {
         <button
           onClick={handleStarTap}
           aria-label="Sip and Savor Spot"
-          className="text-[#2D5A27] transition hover:scale-110"
+          className="text-[#2D5A27] transition hover:scale-110 active:scale-90"
           title="tap thrice for something special"
         >
           <Star size={22} fill="currentColor" />
@@ -181,13 +183,18 @@ export default function MenuPage() {
           <button
             key={b}
             onClick={() => setBranch(b)}
-            className={`rounded-full px-5 py-2 text-sm font-medium transition ${
-              branch === b
-                ? "bg-[#2D5A27] text-[#F9F6F0]"
-                : "border border-stone-300 text-stone-600 hover:border-[#2D5A27]"
+            className={`relative rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+              branch === b ? "text-[#F9F6F0]" : "border border-stone-300 text-stone-600 hover:border-[#2D5A27]"
             }`}
           >
-            {b} Branch
+            {branch === b && (
+              <motion.span
+                layoutId="branch-pill"
+                className="absolute inset-0 rounded-full bg-[#2D5A27]"
+                transition={{ type: "spring", stiffness: 500, damping: 34 }}
+              />
+            )}
+            <span className="relative">{b} Branch</span>
           </button>
         ))}
       </div>
@@ -201,19 +208,20 @@ export default function MenuPage() {
         />
 
         <div className="no-scrollbar -mx-6 mt-3 flex gap-2 overflow-x-auto px-6 pb-1">
-          <button
-            onClick={() => setActiveCategory("All")}
-            className={`chip shrink-0 ${activeCategory === "All" ? "chip-active" : ""}`}
-          >
-            All
-          </button>
-          {visibleCategories.map((c) => (
+          {["All", ...visibleCategories].map((c) => (
             <button
               key={c}
               onClick={() => setActiveCategory(c)}
-              className={`chip shrink-0 whitespace-nowrap ${activeCategory === c ? "chip-active" : ""}`}
+              className={`chip relative shrink-0 whitespace-nowrap ${activeCategory === c ? "chip-active" : ""}`}
             >
-              {c}
+              {activeCategory === c && (
+                <motion.span
+                  layoutId="category-pill"
+                  className="absolute inset-0 rounded-full bg-[#2D5A27]"
+                  transition={{ type: "spring", stiffness: 500, damping: 34 }}
+                />
+              )}
+              <span className="relative">{c}</span>
             </button>
           ))}
         </div>
@@ -230,58 +238,75 @@ export default function MenuPage() {
 
       {!loading && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => setSelectedItem(item)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === "Enter" && setSelectedItem(item)}
-              className={`group cursor-pointer overflow-hidden rounded-2xl border transition hover:shadow-md ${
-                item.is_hidden ? "border-[#2D5A27]/30 bg-[#2D5A27]/5" : "border-stone-200 bg-white"
-              }`}
-            >
-              {item.image_url && (
-                <div className="relative h-44 w-full bg-stone-100">
-                  <Image
-                    src={item.image_url}
-                    alt={item.name}
-                    fill
-                    className="object-contain p-2 transition duration-300 group-hover:scale-105"
-                  />
-                </div>
-              )}
-              <div className="p-5">
-                {activeCategory === "All" && (
-                  <p className="text-xs uppercase tracking-wide text-stone-400">{item.category}</p>
+          <AnimatePresence mode="popLayout">
+            {filtered.map((item, i) => (
+              <motion.div
+                key={item.id}
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.22, delay: Math.min(i, 8) * 0.03 }}
+                whileHover={{ y: -4 }}
+                onClick={() => setSelectedItem(item)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === "Enter" && setSelectedItem(item)}
+                className={`group cursor-pointer overflow-hidden rounded-2xl border shadow-sm transition-shadow hover:shadow-md ${
+                  item.is_hidden ? "border-[#2D5A27]/30 bg-[#2D5A27]/5" : "border-stone-200 bg-white"
+                }`}
+              >
+                {item.image_url && (
+                  <div className="relative h-44 w-full bg-stone-100">
+                    <Image
+                      src={item.image_url}
+                      alt={item.name}
+                      fill
+                      className="object-contain p-2 transition duration-300 group-hover:scale-105"
+                    />
+                  </div>
                 )}
-                <div className="mt-1 flex items-start justify-between gap-3">
-                  <h3 className="font-serif text-lg leading-snug text-stone-900">{item.name}</h3>
-                  <span className="shrink-0 whitespace-nowrap rounded-full bg-[#2D5A27]/10 px-2.5 py-1 text-xs font-medium text-[#2D5A27]">
-                    {formatMenuPrice(item)}
-                  </span>
+                <div className="p-5">
+                  {activeCategory === "All" && (
+                    <p className="text-xs uppercase tracking-wide text-stone-400">{item.category}</p>
+                  )}
+                  <div className="mt-1 flex items-start justify-between gap-3">
+                    <h3 className="font-serif text-lg leading-snug text-stone-900">{item.name}</h3>
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-[#2D5A27]/10 px-2.5 py-1 text-xs font-medium text-[#2D5A27]">
+                      {formatMenuPrice(item)}
+                    </span>
+                  </div>
+                  {item.description && (
+                    <p className="mt-1.5 text-sm leading-relaxed text-stone-600">{item.description}</p>
+                  )}
                 </div>
-                {item.description && (
-                  <p className="mt-1.5 text-sm leading-relaxed text-stone-600">{item.description}</p>
-                )}
-              </div>
-            </div>
-          ))}
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {filtered.length === 0 && (
-            <p className="col-span-full py-12 text-center text-sm text-stone-500">
-              Nothing matches that search.
-            </p>
+            <div className="col-span-full">
+              <EmptyState icon={SearchX} message="Nothing matches that search." />
+            </div>
           )}
         </div>
       )}
 
-      {selectedItem && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setSelectedItem(null)}
-        >
-          <div
+      <AnimatePresence>
+        {selectedItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={() => setSelectedItem(null)}
+          >
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 340, damping: 30 }}
             className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -319,9 +344,10 @@ export default function MenuPage() {
                 {selectedItem.description ?? "No description yet for this item."}
               </p>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

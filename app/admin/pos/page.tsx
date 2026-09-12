@@ -2,11 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import { Receipt, ShoppingCart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import ReceiptModal from "@/components/ReceiptModal";
 import type { ReceiptData } from "@/components/Receipt";
 import CoffeeLoader from "@/components/CoffeeLoader";
+import EmptyState from "@/components/EmptyState";
 
 type Branch = "Palindan" | "Uptown";
 const BRANCHES: Branch[] = ["Palindan", "Uptown"];
@@ -646,19 +649,20 @@ export default function AdminPOSPage() {
           />
 
           <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
-            <button
-              onClick={() => setActiveCategory("All")}
-              className={`chip shrink-0 ${activeCategory === "All" ? "chip-active" : ""}`}
-            >
-              All
-            </button>
-            {categories.map((c) => (
+            {["All", ...categories].map((c) => (
               <button
                 key={c}
                 onClick={() => setActiveCategory(c)}
-                className={`chip shrink-0 whitespace-nowrap ${activeCategory === c ? "chip-active" : ""}`}
+                className={`chip relative shrink-0 whitespace-nowrap ${activeCategory === c ? "chip-active" : ""}`}
               >
-                {c}
+                {activeCategory === c && (
+                  <motion.span
+                    layoutId="pos-category-pill"
+                    className="absolute inset-0 rounded-full bg-[#2D5A27]"
+                    transition={{ type: "spring", stiffness: 500, damping: 34 }}
+                  />
+                )}
+                <span className="relative">{c}</span>
               </button>
             ))}
           </div>
@@ -667,12 +671,18 @@ export default function AdminPOSPage() {
             <CoffeeLoader label="Loading menu…" className="mt-6" />
           ) : (
             <div className="mt-4 flex flex-col gap-3">
+              <AnimatePresence initial={false}>
               {visibleItems.map((item) => {
                 const opts = priceOptions(item);
                 const noteAmounts = item.price_note ? parseNoteAmounts(item.price_note) : [];
                 return (
-                  <div
+                  <motion.div
                     key={item.id}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0 }}
+                    transition={{ duration: 0.2 }}
                     className="flex flex-col gap-2 rounded-2xl border border-stone-200 bg-white shadow-sm p-4"
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -680,7 +690,7 @@ export default function AdminPOSPage() {
                       <button
                         onClick={() => toggle86(item)}
                         title="Mark out of stock"
-                        className="shrink-0 rounded-full border border-stone-200 px-2 py-0.5 text-[11px] text-stone-400 hover:border-red-300 hover:text-red-500"
+                        className="btn-press shrink-0 rounded-full border border-stone-200 px-2 py-0.5 text-[11px] text-stone-400 hover:border-red-300 hover:text-red-500"
                       >
                         86
                       </button>
@@ -691,7 +701,7 @@ export default function AdminPOSPage() {
                           <button
                             key={o.label}
                             onClick={() => addToCart(item, o.label, o.amount)}
-                            className="rounded-full bg-[#2D5A27]/10 px-3 py-1.5 text-xs font-medium text-[#2D5A27] hover:bg-[#2D5A27]/20"
+                            className="btn-press rounded-full bg-[#2D5A27]/10 px-3 py-1.5 text-xs font-medium text-[#2D5A27] hover:bg-[#2D5A27]/20"
                           >
                             {o.label} ₱{o.amount}
                           </button>
@@ -705,7 +715,7 @@ export default function AdminPOSPage() {
                                 addToCart(item, "Add", amt);
                                 setCustomPriceFor(null);
                               }}
-                              className="rounded-full bg-[#2D5A27]/10 px-3 py-1.5 text-xs font-medium text-[#2D5A27] hover:bg-[#2D5A27]/20"
+                              className="btn-press rounded-full bg-[#2D5A27]/10 px-3 py-1.5 text-xs font-medium text-[#2D5A27] hover:bg-[#2D5A27]/20"
                             >
                               ₱{amt}
                             </button>
@@ -720,7 +730,7 @@ export default function AdminPOSPage() {
                           />
                           <button
                             onClick={() => addCustomPrice(item)}
-                            className="rounded-full bg-[#2D5A27] px-3 py-1.5 text-xs font-medium text-[#F9F6F0]"
+                            className="btn-press rounded-full bg-[#2D5A27] px-3 py-1.5 text-xs font-medium text-[#F9F6F0]"
                           >
                             Add
                           </button>
@@ -734,9 +744,10 @@ export default function AdminPOSPage() {
                         </button>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
+              </AnimatePresence>
               {visibleItems.length === 0 && (
                 <p className="text-sm text-stone-500">No items in this category.</p>
               )}
@@ -758,7 +769,7 @@ export default function AdminPOSPage() {
             {loadingOrders ? (
               <CoffeeLoader size={40} label={null} className="mt-2" />
             ) : recentOrders.length === 0 ? (
-              <p className="mt-2 text-sm text-stone-500">No orders yet today.</p>
+              <EmptyState icon={Receipt} message="No orders yet today." />
             ) : (
               <div className="mt-3 flex flex-col gap-2">
                 {recentOrders.map((o) => (
@@ -837,7 +848,12 @@ export default function AdminPOSPage() {
           <h3 className="font-serif text-lg text-[#2D5A27]">Current Order</h3>
 
           <div className="mt-3 flex flex-col gap-2">
-            {cart.length === 0 && <p className="text-sm text-stone-500">No items yet — tap the menu to add.</p>}
+            {cart.length === 0 && (
+              <p className="animate-fade-in flex items-center gap-2 text-sm text-stone-500">
+                <ShoppingCart size={15} className="text-[#2D5A27]/40" />
+                No items yet — tap the menu to add.
+              </p>
+            )}
             {cart.map((l) => (
               <div key={l.key} className="flex items-center justify-between gap-2 text-sm">
                 <div className="min-w-0 flex-1">
@@ -1000,9 +1016,16 @@ export default function AdminPOSPage() {
                     setPaymentMethod(m);
                     if (m !== "Cash") setCashReceived("");
                   }}
-                  className={`chip ${paymentMethod === m ? "chip-active" : ""}`}
+                  className={`chip relative ${paymentMethod === m ? "chip-active" : ""}`}
                 >
-                  {m}
+                  {paymentMethod === m && (
+                    <motion.span
+                      layoutId="pos-payment-pill"
+                      className="absolute inset-0 rounded-full bg-[#2D5A27]"
+                      transition={{ type: "spring", stiffness: 500, damping: 34 }}
+                    />
+                  )}
+                  <span className="relative">{m}</span>
                 </button>
               ))}
             </div>
@@ -1064,7 +1087,7 @@ export default function AdminPOSPage() {
             <button
               onClick={completeOrder}
               disabled={cart.length === 0 || completing || discountNeedsNote}
-              className="flex-1 rounded-full bg-[#2D5A27] py-3 text-sm font-medium text-[#F9F6F0] disabled:opacity-50"
+              className="btn-press flex-1 rounded-full bg-[#2D5A27] py-3 text-sm font-medium text-[#F9F6F0] disabled:opacity-50 disabled:active:scale-100"
             >
               {completing ? "Saving…" : `Complete Order — ₱${total.toFixed(2)}`}
             </button>
@@ -1072,7 +1095,7 @@ export default function AdminPOSPage() {
               onClick={holdCurrentOrder}
               disabled={cart.length === 0}
               title="Park this order and start a new one"
-              className="shrink-0 rounded-full border border-stone-300 px-4 py-3 text-sm text-stone-600 disabled:opacity-40"
+              className="btn-press shrink-0 rounded-full border border-stone-300 px-4 py-3 text-sm text-stone-600 disabled:opacity-40 disabled:active:scale-100"
             >
               Hold
             </button>

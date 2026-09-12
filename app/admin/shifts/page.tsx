@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import CoffeeLoader from "@/components/CoffeeLoader";
+import EmptyState from "@/components/EmptyState";
 
 type ClosetoutRow = {
   id: string;
@@ -142,8 +144,11 @@ export default function AdminShiftsPage() {
 
             {!loading && visible.length === 0 && !error && (
               <tr>
-                <td colSpan={8} className="px-5 py-8 text-center text-stone-500">
-                  {onlyVariances ? "No shifts with a variance." : "No shift close-outs yet."}
+                <td colSpan={8}>
+                  <EmptyState
+                    icon={Wallet}
+                    message={onlyVariances ? "No shifts with a variance." : "No shift close-outs yet."}
+                  />
                 </td>
               </tr>
             )}
