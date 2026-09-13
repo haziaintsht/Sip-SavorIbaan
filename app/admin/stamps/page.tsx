@@ -75,13 +75,20 @@ export default function AdminStampsPage() {
     }
 
     setCardsWithStamps(
-      cardRows.map((c: any) => ({
-        cardId: c.id,
-        fullName: c.profiles?.full_name ?? "Unknown",
-        phoneNumber: c.profiles?.phone_number ?? null,
-        stampCount: c.stamp_count,
-        stampDates: datesByCard.get(c.id) ?? [],
-      }))
+      cardRows.map((c: any) => {
+        // Every ADD_STAMP ever logged for this card, including ones from
+        // before a past reward redemption or a since-corrected misclick —
+        // keep only the most recent `stamp_count` of them so the date
+        // chips shown always match what the count actually says.
+        const dates = datesByCard.get(c.id) ?? [];
+        return {
+          cardId: c.id,
+          fullName: c.profiles?.full_name ?? "Unknown",
+          phoneNumber: c.profiles?.phone_number ?? null,
+          stampCount: c.stamp_count,
+          stampDates: dates.slice(-c.stamp_count),
+        };
+      })
     );
     setLoadingCards(false);
   }
@@ -173,7 +180,11 @@ export default function AdminStampsPage() {
     runSearch(query);
   }
 
-  async function runAction(cardId: string, action: "ADD_STAMP" | "REDEEM_REWARD") {
+  async function runAction(cardId: string, action: "ADD_STAMP" | "REMOVE_STAMP" | "REDEEM_REWARD") {
+    if (action === "REMOVE_STAMP" && !confirm("Remove one stamp from this card? Use this to undo a misclick.")) {
+      return;
+    }
+
     setActionMsg(null);
     const { error } = await supabase.rpc("stamp_action", {
       p_card_id: cardId,
@@ -186,13 +197,16 @@ export default function AdminStampsPage() {
       return;
     }
 
-    setActionMsg(action === "ADD_STAMP" ? "Stamp added." : "Reward redeemed.");
+    setActionMsg(
+      action === "ADD_STAMP" ? "Stamp added." : action === "REMOVE_STAMP" ? "Stamp removed." : "Reward redeemed."
+    );
     setResults((prev) =>
-      prev.map((r) =>
-        r.card_id === cardId
-          ? { ...r, stamp_count: action === "ADD_STAMP" ? Math.min(r.stamp_count + 1, 10) : 0 }
-          : r
-      )
+      prev.map((r) => {
+        if (r.card_id !== cardId) return r;
+        if (action === "ADD_STAMP") return { ...r, stamp_count: Math.min(r.stamp_count + 1, 10) };
+        if (action === "REMOVE_STAMP") return { ...r, stamp_count: Math.max(r.stamp_count - 1, 0) };
+        return { ...r, stamp_count: 0 };
+      })
     );
     if (access.role === "super_admin") loadCardsWithStamps();
   }
@@ -262,13 +276,21 @@ export default function AdminStampsPage() {
               <p className="text-sm text-stone-500">{customer.phone_number ?? "—"}</p>
               <p className="mt-1 text-sm text-[#2D5A27]">{customer.stamp_count} / 10 stamps</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => runAction(customer.card_id, "ADD_STAMP")}
                 disabled={customer.stamp_count >= 10}
                 className="rounded-full bg-[#2D5A27] px-4 py-2 text-sm text-[#F9F6F0] disabled:opacity-40"
               >
                 + Add Digital Stamp
+              </button>
+              <button
+                onClick={() => runAction(customer.card_id, "REMOVE_STAMP")}
+                disabled={customer.stamp_count <= 0}
+                title="Undo a misclicked Add Stamp"
+                className="rounded-full border border-red-300 px-4 py-2 text-sm text-red-600 disabled:opacity-40"
+              >
+                − Remove Stamp
               </button>
               <button
                 onClick={() => runAction(customer.card_id, "REDEEM_REWARD")}
