@@ -90,11 +90,12 @@ export default function Navbar({
   if (pathname?.startsWith("/admin")) return null;
 
   const isStaff = role === "admin" || role === "super_admin";
+  const logoHref = loggedIn ? (isStaff ? "/admin" : "/dashboard") : "/";
 
   return (
     <header className="sticky top-0 z-40 border-b border-[#2D5A27]/10 bg-[#F9F6F0]/95 backdrop-blur">
       <nav className="relative z-50 mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href={logoHref} className="flex items-center gap-2.5">
           <Image
             src="/logo_sns.jpg"
             alt="Sip & Savor Spot"
