@@ -3,20 +3,22 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import PasswordInput from "@/components/PasswordInput";
 import CoffeeLoader from "@/components/CoffeeLoader";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
 
 export default function AccountPage() {
   const router = useRouter();
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [location, setLocation] = useState("");
   const [profileUpdatedAt, setProfileUpdatedAt] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const cooldownUntil = profileUpdatedAt
     ? new Date(new Date(profileUpdatedAt).getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -28,11 +30,6 @@ export default function AccountPage() {
     year: "numeric",
   });
 
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
-
   useEffect(() => {
     async function load() {
       const {
@@ -42,6 +39,7 @@ export default function AccountPage() {
         router.push("/login");
         return;
       }
+      setEmail(user.email ?? "");
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name, phone_number, location, profile_updated_at")
@@ -77,32 +75,6 @@ export default function AccountPage() {
     } else {
       setProfileMessage({ type: "ok", text: "Profile updated." });
       setProfileUpdatedAt(new Date().toISOString());
-    }
-  }
-
-  async function handleChangePassword(e: React.FormEvent) {
-    e.preventDefault();
-    setPasswordMessage(null);
-
-    if (newPassword !== confirmPassword) {
-      setPasswordMessage({ type: "error", text: "Passwords don't match." });
-      return;
-    }
-    if (newPassword.length < 8) {
-      setPasswordMessage({ type: "error", text: "Password must be at least 8 characters." });
-      return;
-    }
-
-    setSavingPassword(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setSavingPassword(false);
-
-    if (error) {
-      setPasswordMessage({ type: "error", text: error.message });
-    } else {
-      setPasswordMessage({ type: "ok", text: "Password updated." });
-      setNewPassword("");
-      setConfirmPassword("");
     }
   }
 
@@ -177,47 +149,20 @@ export default function AccountPage() {
         </button>
       </form>
 
-      <form onSubmit={handleChangePassword} className="mt-12 flex flex-col gap-4 border-t border-stone-200 pt-8">
+      <div className="mt-12 border-t border-stone-200 pt-8">
         <h2 className="font-serif text-lg text-[#2D5A27]">Change password</h2>
-
-        <label className="flex flex-col gap-1.5 text-sm text-stone-700">
-          New password
-          <PasswordInput
-            required
-            minLength={8}
-            value={newPassword}
-            onChange={setNewPassword}
-            autoComplete="new-password"
-            className="input"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1.5 text-sm text-stone-700">
-          Confirm new password
-          <PasswordInput
-            required
-            minLength={8}
-            value={confirmPassword}
-            onChange={setConfirmPassword}
-            autoComplete="new-password"
-            className="input"
-          />
-        </label>
-
-        {passwordMessage && (
-          <p className={`text-sm ${passwordMessage.type === "ok" ? "text-[#2D5A27]" : "text-red-600"}`}>
-            {passwordMessage.text}
-          </p>
-        )}
-
+        <p className="mt-1 text-sm text-stone-600">You&apos;ll need your current password to set a new one.</p>
         <button
-          type="submit"
-          disabled={savingPassword}
-          className="mt-2 rounded-full border border-[#2D5A27] px-6 py-3 text-sm font-medium text-[#2D5A27] disabled:opacity-60"
+          onClick={() => setShowPasswordModal(true)}
+          className="mt-4 w-full rounded-full border border-[#2D5A27] px-6 py-3 text-sm font-medium text-[#2D5A27]"
         >
-          {savingPassword ? "Updating..." : "Update password"}
+          Change password
         </button>
-      </form>
+      </div>
+
+      {showPasswordModal && (
+        <ChangePasswordModal email={email} onClose={() => setShowPasswordModal(false)} />
+      )}
     </main>
   );
 }
