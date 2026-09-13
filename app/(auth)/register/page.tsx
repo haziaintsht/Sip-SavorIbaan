@@ -16,11 +16,13 @@ export default function RegisterPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountExists, setAccountExists] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setAccountExists(false);
 
     const res = await fetch("/api/auth/signup", {
       method: "POST",
@@ -32,7 +34,11 @@ export default function RegisterPage() {
     setLoading(false);
 
     if (!res.ok) {
-      setError(body.error ?? "Failed to create account");
+      if (body.code === "ACCOUNT_EXISTS") {
+        setAccountExists(true);
+      } else {
+        setError(body.error ?? "Failed to create account");
+      }
       return;
     }
 
@@ -119,6 +125,15 @@ export default function RegisterPage() {
           </span>
         </label>
 
+        {accountExists && (
+          <p className="rounded-xl bg-[#2D5A27]/10 px-4 py-3 text-sm text-[#2D5A27]">
+            You already have an account with this email.{" "}
+            <Link href="/login" className="font-medium underline">
+              Log in instead
+            </Link>
+            .
+          </p>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <button

@@ -28,6 +28,19 @@ export default function LoginPage() {
     setOverlayPhase("loading");
     setError(null);
 
+    const throttleRes = await fetch("/api/auth/login-throttle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!throttleRes.ok) {
+      const throttleBody = await throttleRes.json().catch(() => ({}));
+      setLoading(false);
+      setOverlayPhase(null);
+      setError(throttleBody.error ?? "Too many attempts. Please wait a bit and try again.");
+      return;
+    }
+
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,

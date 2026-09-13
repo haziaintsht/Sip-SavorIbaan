@@ -8,6 +8,9 @@ import CoffeeLoader from "@/components/CoffeeLoader";
 type RangeKey = "7d" | "30d";
 
 type DayRow = { date: string; Palindan: number; Uptown: number };
+type ItemRow = { name: string; quantity: number; line_total: number; orders: { created_at: string } | null };
+type TopItem = { name: string; quantity: number; revenue: number };
+type BarangayCount = { label: string; count: number };
 
 // Local-time date key (not toISOString, which is UTC and can shift the
 // date by a day relative to the local-midnight bucket boundaries below).
@@ -25,10 +28,15 @@ export default function AdminAnalyticsPage() {
   const [range, setRange] = useState<RangeKey>("7d");
   const [rows, setRows] = useState<{ branch: string; total: number; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [itemRows, setItemRows] = useState<ItemRow[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
+  const [barangayRows, setBarangayRows] = useState<{ location: string | null }[]>([]);
+  const [barangayLoading, setBarangayLoading] = useState(true);
 
   useEffect(() => {
     if (access.role !== "super_admin") return;
     setLoading(true);
+    setItemsLoading(true);
     const days = range === "7d" ? 7 : 30;
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -43,7 +51,31 @@ export default function AdminAnalyticsPage() {
         setRows(data ?? []);
         setLoading(false);
       });
+
+    supabase
+      .from("order_items")
+      .select("name, quantity, line_total, orders!inner(created_at, status)")
+      .eq("orders.status", "completed")
+      .gte("orders.created_at", start.toISOString())
+      .then(({ data }) => {
+        setItemRows((data as unknown as ItemRow[]) ?? []);
+        setItemsLoading(false);
+      });
   }, [supabase, range, access.role]);
+
+  // Customer base by barangay — a standing demographic picture, not scoped
+  // to the revenue-period toggle above.
+  useEffect(() => {
+    if (access.role !== "super_admin") return;
+    supabase
+      .from("profiles")
+      .select("location")
+      .eq("role", "customer")
+      .then(({ data }) => {
+        setBarangayRows(data ?? []);
+        setBarangayLoading(false);
+      });
+  }, [supabase, access.role]);
 
   const { days, totals } = useMemo(() => {
     const dayCount = range === "7d" ? 7 : 30;
@@ -73,6 +105,52 @@ export default function AdminAnalyticsPage() {
   }, [rows, range]);
 
   const maxDay = Math.max(...days.map((d) => Math.max(d.Palindan, d.Uptown)), 0);
+
+  const topItems = useMemo(() => {
+    const byName = new Map<string, TopItem>();
+    for (const r of itemRows) {
+      const existing = byName.get(r.name) ?? { name: r.name, quantity: 0, revenue: 0 };
+      existing.quantity += r.quantity;
+      existing.revenue += Number(r.line_total);
+      byName.set(r.name, existing);
+    }
+    return [...byName.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 8);
+  }, [itemRows]);
+  const maxItemQty = Math.max(...topItems.map((i) => i.quantity), 0);
+
+  // Hour-of-day distribution reuses the same order rows already fetched for
+  // the revenue chart above — local time, same reasoning as dateKey().
+  const hourly = useMemo(() => {
+    const buckets = Array.from({ length: 24 }, (_, h) => ({ hour: h, orders: 0 }));
+    for (const r of rows) {
+      buckets[new Date(r.created_at).getHours()].orders += 1;
+    }
+    return buckets;
+  }, [rows]);
+  const maxHour = Math.max(...hourly.map((h) => h.orders), 0);
+  const busiestHour = hourly.reduce((best, h) => (h.orders > best.orders ? h : best), hourly[0]);
+
+  function formatHour(h: number) {
+    const period = h < 12 ? "AM" : "PM";
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    return `${hour12}${period}`;
+  }
+
+  const barangays = useMemo(() => {
+    const byLabel = new Map<string, BarangayCount>();
+    for (const r of barangayRows) {
+      const raw = r.location?.trim();
+      const key = raw ? raw.toLowerCase() : "__unspecified__";
+      const existing = byLabel.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        byLabel.set(key, { label: raw || "Not specified", count: 1 });
+      }
+    }
+    return [...byLabel.values()].sort((a, b) => b.count - a.count).slice(0, 10);
+  }, [barangayRows]);
+  const maxBarangay = Math.max(...barangays.map((b) => b.count), 0);
 
   if (!access.loading && access.role !== "super_admin") {
     return (
@@ -166,6 +244,101 @@ export default function AdminAnalyticsPage() {
             </div>
           );
         })}
+      </div>
+
+      <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">
+        Best-Selling Items — {range === "7d" ? "Last 7 days" : "Last 30 days"}
+      </h3>
+      <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+        {itemsLoading ? (
+          <CoffeeLoader size={56} />
+        ) : topItems.length === 0 ? (
+          <p className="text-sm text-stone-500">No completed orders in this period.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {topItems.map((item) => (
+              <div key={item.name} className="flex items-center gap-3">
+                <span className="w-44 shrink-0 truncate text-sm text-stone-700" title={item.name}>
+                  {item.name}
+                </span>
+                <div className="h-4 flex-1 overflow-hidden rounded-full bg-stone-100">
+                  <div
+                    className="h-full rounded-full bg-[#2D5A27]"
+                    style={{ width: `${maxItemQty ? (item.quantity / maxItemQty) * 100 : 0}%` }}
+                  />
+                </div>
+                <span className="w-14 shrink-0 text-right text-sm font-semibold text-[#2D5A27]">
+                  {item.quantity}×
+                </span>
+                <span className="w-24 shrink-0 text-right text-xs text-stone-500">
+                  ₱{item.revenue.toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">
+        Busiest Hour of Day — {range === "7d" ? "Last 7 days" : "Last 30 days"}
+      </h3>
+      <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+        {loading ? (
+          <CoffeeLoader size={56} />
+        ) : maxHour === 0 ? (
+          <p className="text-sm text-stone-500">No completed orders in this period.</p>
+        ) : (
+          <>
+            <p className="text-sm text-stone-600">
+              Busiest hour: <span className="font-semibold text-[#2D5A27]">{formatHour(busiestHour.hour)}</span> ({busiestHour.orders} order{busiestHour.orders === 1 ? "" : "s"})
+            </p>
+            <div className="mt-4 flex items-end gap-0.5 overflow-x-auto pb-1">
+              {hourly.map((h) => (
+                <div key={h.hour} className="flex min-w-[16px] flex-1 flex-col items-center">
+                  <div className="flex h-24 w-full items-end justify-center">
+                    <div
+                      className="w-full rounded-t bg-[#2D5A27]"
+                      style={{ height: `${maxHour ? Math.max((h.orders / maxHour) * 100, h.orders > 0 ? 3 : 0) : 0}%` }}
+                      title={`${formatHour(h.hour)}: ${h.orders} order${h.orders === 1 ? "" : "s"}`}
+                    />
+                  </div>
+                  {h.hour % 3 === 0 && (
+                    <span className="mt-1.5 whitespace-nowrap text-[9px] text-stone-400">{formatHour(h.hour)}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">Customers by Barangay</h3>
+      <p className="mt-1 text-sm text-stone-600">Where the loyalty program's members live — all-time, not scoped to the period above.</p>
+      <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+        {barangayLoading ? (
+          <CoffeeLoader size={56} />
+        ) : barangays.length === 0 ? (
+          <p className="text-sm text-stone-500">No verified customers yet.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {barangays.map((b) => (
+              <div key={b.label} className="flex items-center gap-3">
+                <span className="w-44 shrink-0 truncate text-sm text-stone-700" title={b.label}>
+                  {b.label}
+                </span>
+                <div className="h-4 flex-1 overflow-hidden rounded-full bg-stone-100">
+                  <div
+                    className="h-full rounded-full bg-[#2D5A27]"
+                    style={{ width: `${maxBarangay ? (b.count / maxBarangay) * 100 : 0}%` }}
+                  />
+                </div>
+                <span className="w-16 shrink-0 text-right text-sm font-semibold text-[#2D5A27]">
+                  {b.count} {b.count === 1 ? "customer" : "customers"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

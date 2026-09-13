@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient, findUserByEmail } from "@/lib/supabase/admin";
 import { generateCode, hashCode, CODE_TTL_MINUTES } from "@/lib/verificationCode";
 import { sendSignupCode } from "@/lib/emailjs";
+import { checkRateLimit, getClientIp, TOO_MANY_REQUESTS } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -11,6 +12,13 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
+
+  const ip = getClientIp(request);
+  const allowed = await checkRateLimit(admin, `resend-signup-code:${ip}`, 5, 3600);
+  if (!allowed) {
+    return NextResponse.json(TOO_MANY_REQUESTS, { status: 429 });
+  }
+
   const { user } = await findUserByEmail(admin, email);
 
   // Same response whether or not the account exists, so this can't be used
