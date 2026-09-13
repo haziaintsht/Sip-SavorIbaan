@@ -5,6 +5,7 @@ import { formatMenuPrice } from "@/lib/menuPrice";
 import Reveal from "@/components/Reveal";
 import FAQAccordion from "@/components/FAQAccordion";
 import PhotoMarquee from "@/components/PhotoMarquee";
+import TestimonialsMarquee from "@/components/TestimonialsMarquee";
 
 const FALLBACK_BRANCHES = [
   {
@@ -48,6 +49,36 @@ const testimonials = [
       "Go-to spot namin ng family every weekend. Cozy yung ambiance, maganda din for chikahan. Sulit yung loyalty card, libre na kape after 10 stamps!",
     name: "Grace Villanueva",
     branch: "Palindan Branch",
+  },
+  {
+    quote:
+      "Dinala ko yung aso ko dito last week, ayos lang pala! Alfresco pa yung seating so sobrang relax ng vibe. Balik-balikan talaga.",
+    name: "Ramon Macatangay",
+    branch: "Uptown Branch",
+  },
+  {
+    quote:
+      "May live music sila tuwing weekend, sobrang saya! Dito na lang kami palagi mag-hangout ng mga kaibigan ko every Saturday night.",
+    name: "Baby Marasigan",
+    branch: "Palindan Branch",
+  },
+  {
+    quote:
+      "Maluwag yung parking kaya OK na OK pag maramihan kami. Yung mga blended drinks nila, panalo lagi — ilang beses na kami bumalik dito.",
+    name: "Ella Panganiban",
+    branch: "Uptown Branch",
+  },
+  {
+    quote:
+      "First time ko dito nung nag-work from home ako, ayun na-loyalty program pa pala ako in-add. Tuwang-tuwa ako sa stamp card nila, ang cute!",
+    name: "Noel Ilagan",
+    branch: "Palindan Branch",
+  },
+  {
+    quote:
+      "Naka-ilang stamp na ako dito sa Uptown, sulit talaga bawat order. Yung rice meals nila, laking tulong pag busy day sa trabaho.",
+    name: "Tin Mendoza",
+    branch: "Uptown Branch",
   },
 ];
 
@@ -299,24 +330,13 @@ export default async function HomePage() {
       </section>
 
       {/* Testimonials */}
-      <section className="px-6 py-16">
-        <div className="mx-auto max-w-6xl text-center">
-          <Reveal>
-            <p className="text-sm uppercase tracking-widest text-[#2D5A27]/60">What people say</p>
-            <h2 className="mt-1 font-serif text-3xl text-[#2D5A27]">From Our Regulars</h2>
-          </Reveal>
-
-          <div className="mt-10 grid gap-6 text-left sm:grid-cols-3">
-            {testimonials.map((t, i) => (
-              <Reveal key={i} delay={i * 0.1}>
-                <div className="rounded-2xl border border-[#2D5A27]/15 bg-white p-6 shadow-sm">
-                  <p className="text-sm italic text-stone-600">&quot;{t.quote}&quot;</p>
-                  <p className="mt-4 text-sm font-medium text-[#2D5A27]">{redactName(t.name)}</p>
-                  <p className="text-xs text-stone-500">{t.branch}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+      <section className="py-16">
+        <Reveal className="mx-auto max-w-6xl px-6 text-center">
+          <p className="text-sm uppercase tracking-widest text-[#2D5A27]/60">What people say</p>
+          <h2 className="mt-1 font-serif text-3xl text-[#2D5A27]">From Our Regulars</h2>
+        </Reveal>
+        <div className="mt-10">
+          <TestimonialsMarquee testimonials={testimonials} redactName={redactName} />
         </div>
       </section>
     </main>

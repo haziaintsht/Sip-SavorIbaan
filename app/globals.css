@@ -83,6 +83,12 @@ body {
   animation-play-state: paused;
 }
 
+/* Testimonial cards need to be read, not just glanced at, so they scroll
+   slower than the photo strip while reusing the same track/pause behavior. */
+.marquee-track-slow {
+  animation-duration: 90s;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marquee-track {
     animation: none;
