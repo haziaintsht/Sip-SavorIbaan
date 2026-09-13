@@ -32,6 +32,8 @@ export default function AdminAnalyticsPage() {
   const [itemsLoading, setItemsLoading] = useState(true);
   const [barangayRows, setBarangayRows] = useState<{ location: string | null }[]>([]);
   const [barangayLoading, setBarangayLoading] = useState(true);
+  const [showAllItems, setShowAllItems] = useState(false);
+  const [showAllBarangays, setShowAllBarangays] = useState(false);
 
   useEffect(() => {
     if (access.role !== "super_admin") return;
@@ -114,9 +116,10 @@ export default function AdminAnalyticsPage() {
       existing.revenue += Number(r.line_total);
       byName.set(r.name, existing);
     }
-    return [...byName.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 8);
+    return [...byName.values()].sort((a, b) => b.quantity - a.quantity);
   }, [itemRows]);
   const maxItemQty = Math.max(...topItems.map((i) => i.quantity), 0);
+  const visibleItems = showAllItems ? topItems : topItems.slice(0, 5);
 
   // Hour-of-day distribution reuses the same order rows already fetched for
   // the revenue chart above — local time, same reasoning as dateKey().
@@ -148,9 +151,10 @@ export default function AdminAnalyticsPage() {
         byLabel.set(key, { label: raw || "Not specified", count: 1 });
       }
     }
-    return [...byLabel.values()].sort((a, b) => b.count - a.count).slice(0, 10);
+    return [...byLabel.values()].sort((a, b) => b.count - a.count);
   }, [barangayRows]);
   const maxBarangay = Math.max(...barangays.map((b) => b.count), 0);
+  const visibleBarangays = showAllBarangays ? barangays : barangays.slice(0, 5);
 
   if (!access.loading && access.role !== "super_admin") {
     return (
@@ -255,27 +259,37 @@ export default function AdminAnalyticsPage() {
         ) : topItems.length === 0 ? (
           <p className="text-sm text-stone-500">No completed orders in this period.</p>
         ) : (
-          <div className="flex flex-col gap-3">
-            {topItems.map((item) => (
-              <div key={item.name} className="flex items-center gap-3">
-                <span className="w-44 shrink-0 truncate text-sm text-stone-700" title={item.name}>
-                  {item.name}
-                </span>
-                <div className="h-4 flex-1 overflow-hidden rounded-full bg-stone-100">
-                  <div
-                    className="h-full rounded-full bg-[#2D5A27]"
-                    style={{ width: `${maxItemQty ? (item.quantity / maxItemQty) * 100 : 0}%` }}
-                  />
+          <>
+            <div className="flex flex-col gap-3">
+              {visibleItems.map((item) => (
+                <div key={item.name} className="flex items-center gap-3">
+                  <span className="w-44 shrink-0 truncate text-sm text-stone-700" title={item.name}>
+                    {item.name}
+                  </span>
+                  <div className="h-4 flex-1 overflow-hidden rounded-full bg-stone-100">
+                    <div
+                      className="h-full rounded-full bg-[#2D5A27]"
+                      style={{ width: `${maxItemQty ? (item.quantity / maxItemQty) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span className="w-14 shrink-0 text-right text-sm font-semibold text-[#2D5A27]">
+                    {item.quantity}×
+                  </span>
+                  <span className="w-24 shrink-0 text-right text-xs text-stone-500">
+                    ₱{item.revenue.toFixed(2)}
+                  </span>
                 </div>
-                <span className="w-14 shrink-0 text-right text-sm font-semibold text-[#2D5A27]">
-                  {item.quantity}×
-                </span>
-                <span className="w-24 shrink-0 text-right text-xs text-stone-500">
-                  ₱{item.revenue.toFixed(2)}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {topItems.length > 5 && (
+              <button
+                onClick={() => setShowAllItems((v) => !v)}
+                className="mt-4 text-sm font-medium text-[#2D5A27] hover:underline"
+              >
+                {showAllItems ? "Show top 5" : `See all ${topItems.length} items`}
+              </button>
+            )}
+          </>
         )}
       </div>
 
@@ -320,24 +334,34 @@ export default function AdminAnalyticsPage() {
         ) : barangays.length === 0 ? (
           <p className="text-sm text-stone-500">No verified customers yet.</p>
         ) : (
-          <div className="flex flex-col gap-3">
-            {barangays.map((b) => (
-              <div key={b.label} className="flex items-center gap-3">
-                <span className="w-44 shrink-0 truncate text-sm text-stone-700" title={b.label}>
-                  {b.label}
-                </span>
-                <div className="h-4 flex-1 overflow-hidden rounded-full bg-stone-100">
-                  <div
-                    className="h-full rounded-full bg-[#2D5A27]"
-                    style={{ width: `${maxBarangay ? (b.count / maxBarangay) * 100 : 0}%` }}
-                  />
+          <>
+            <div className="flex flex-col gap-3">
+              {visibleBarangays.map((b) => (
+                <div key={b.label} className="flex items-center gap-3">
+                  <span className="w-44 shrink-0 truncate text-sm text-stone-700" title={b.label}>
+                    {b.label}
+                  </span>
+                  <div className="h-4 flex-1 overflow-hidden rounded-full bg-stone-100">
+                    <div
+                      className="h-full rounded-full bg-[#2D5A27]"
+                      style={{ width: `${maxBarangay ? (b.count / maxBarangay) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span className="w-16 shrink-0 text-right text-sm font-semibold text-[#2D5A27]">
+                    {b.count} {b.count === 1 ? "customer" : "customers"}
+                  </span>
                 </div>
-                <span className="w-16 shrink-0 text-right text-sm font-semibold text-[#2D5A27]">
-                  {b.count} {b.count === 1 ? "customer" : "customers"}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {barangays.length > 5 && (
+              <button
+                onClick={() => setShowAllBarangays((v) => !v)}
+                className="mt-4 text-sm font-medium text-[#2D5A27] hover:underline"
+              >
+                {showAllBarangays ? "Show top 5" : `See all ${barangays.length} barangays`}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
