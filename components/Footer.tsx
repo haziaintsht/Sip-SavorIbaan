@@ -51,7 +51,7 @@ export default function Footer() {
 
   return (
     <footer id="contact" className="border-t border-[#2D5A27]/10 bg-[#2D5A27] text-[#F9F6F0]">
-      <div className="mx-auto grid max-w-6xl gap-8 px-6 py-8 sm:grid-cols-2 md:grid-cols-3">
+      <div className="mx-auto grid max-w-6xl gap-8 px-6 py-8 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <Link href="/" className="flex items-center gap-2.5">
             <Image src="/logo_sns.jpg" alt="Sip & Savor Spot" width={32} height={32} className="rounded-full" />
@@ -62,17 +62,21 @@ export default function Footer() {
           </p>
         </div>
 
-        {!loggedIn && (
-          <div>
-            <h3 className="text-sm font-semibold text-[#F9F6F0]">Company</h3>
-            <ul className="mt-3 flex flex-col gap-2 text-sm text-[#F9F6F0]/80">
-              <li><Link href="/" className="hover:text-[#F9F6F0] hover:underline">Home</Link></li>
-              <li><Link href="/menu" className="hover:text-[#F9F6F0] hover:underline">Menu</Link></li>
-              <li><Link href="/#story" className="hover:text-[#F9F6F0] hover:underline">About</Link></li>
+        <div>
+          <h3 className="text-sm font-semibold text-[#F9F6F0]">Explore</h3>
+          <ul className="mt-3 flex flex-col gap-2 text-sm text-[#F9F6F0]/80">
+            {!loggedIn && (
+              <>
+                <li><Link href="/" className="hover:text-[#F9F6F0] hover:underline">Home</Link></li>
+                <li><Link href="/menu" className="hover:text-[#F9F6F0] hover:underline">Menu</Link></li>
+              </>
+            )}
+            <li><Link href="/#story" className="hover:text-[#F9F6F0] hover:underline">About</Link></li>
+            {!loggedIn && (
               <li><Link href="/register" className="hover:text-[#F9F6F0] hover:underline">Join Loyalty</Link></li>
-            </ul>
-          </div>
-        )}
+            )}
+          </ul>
+        </div>
 
         <div>
           <h3 className="text-sm font-semibold text-[#F9F6F0]">Visit Us</h3>
@@ -82,6 +86,47 @@ export default function Footer() {
                 {b.name} — {b.address}
               </li>
             ))}
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-[#F9F6F0]">Contact Us</h3>
+          <ul className="mt-3 flex flex-col gap-2 text-sm text-[#F9F6F0]/80">
+            <li>
+              <a href="mailto:sipandsavorspot1@gmail.com" className="hover:text-[#F9F6F0] hover:underline">
+                sipandsavorspot1@gmail.com
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://www.instagram.com/sipnsavorspot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#F9F6F0] hover:underline"
+              >
+                Instagram: @sipnsavorspot
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://www.tiktok.com/@sipandsavorspot?_r=1&_t=ZS-99cLFRi93mG"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#F9F6F0] hover:underline"
+              >
+                TikTok: @sipandsavorspot
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://www.facebook.com/profile.php?id=61562860304155"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#F9F6F0] hover:underline"
+              >
+                Facebook: Sip &amp; Savor Spot
+              </a>
+            </li>
           </ul>
         </div>
       </div>
