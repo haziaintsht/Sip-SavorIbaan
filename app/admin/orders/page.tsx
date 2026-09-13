@@ -27,6 +27,9 @@ type OrderRow = {
   subtotal: number;
   discount: number;
   tax: number;
+  container_fee: number;
+  container_count: number;
+  dining_option: "Dine-in" | "Take-out";
   total: number;
   payment_method: string;
   status: "completed" | "voided";
@@ -86,7 +89,7 @@ export default function AdminOrdersPage() {
     let query = supabase
       .from("orders")
       .select(
-        "id, created_at, branch, subtotal, discount, tax, total, payment_method, status, discount_reason, discount_note, customer:profiles!orders_customer_id_fkey(full_name), staff:profiles!orders_admin_id_fkey(full_name), order_items(name, quantity, unit_price)"
+        "id, created_at, branch, subtotal, discount, tax, container_fee, container_count, dining_option, total, payment_method, status, discount_reason, discount_note, customer:profiles!orders_customer_id_fkey(full_name), staff:profiles!orders_admin_id_fkey(full_name), order_items(name, quantity, unit_price)"
       )
       .order("created_at", { ascending: false })
       .limit(limit + 1);
@@ -115,6 +118,9 @@ export default function AdminOrdersPage() {
         subtotal: o.subtotal,
         discount: o.discount,
         tax: o.tax,
+        container_fee: o.container_fee,
+        container_count: o.container_count,
+        dining_option: o.dining_option,
         total: o.total,
         payment_method: o.payment_method,
         status: o.status,
@@ -165,12 +171,14 @@ export default function AdminOrdersPage() {
   }, [visibleOrders]);
 
   function exportCsv() {
-    const header = ["When", "Branch", "Items", "Customer", "Staff", "Payment", "Total", "Status"];
+    const header = ["When", "Branch", "Items", "Dining", "Containers", "Customer", "Staff", "Payment", "Total", "Status"];
     const lines = visibleOrders.map((o) =>
       [
         new Date(o.created_at).toLocaleString("en-PH"),
         o.branch,
         o.item_summary,
+        o.dining_option,
+        o.container_count,
         o.customer_name ?? "",
         o.staff_name ?? "",
         o.payment_method,
@@ -199,6 +207,9 @@ export default function AdminOrdersPage() {
       subtotal: Number(o.subtotal),
       discount: Number(o.discount),
       tax: Number(o.tax),
+      containerFee: Number(o.container_fee),
+      containerCount: o.container_count,
+      diningOption: o.dining_option,
       total: Number(o.total),
       paymentMethod: o.payment_method,
       customerName: o.customer_name,
@@ -353,7 +364,14 @@ export default function AdminOrdersPage() {
                     })}
                   </td>
                   <td className="px-4 py-3 text-stone-700">{o.branch}</td>
-                  <td className="max-w-xs px-4 py-3 text-stone-900">{o.item_summary || "—"}</td>
+                  <td className="max-w-xs px-4 py-3 text-stone-900">
+                    {o.item_summary || "—"}
+                    {o.dining_option === "Take-out" && (
+                      <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                        Take-out{o.container_count > 0 ? ` ×${o.container_count}` : ""}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-stone-700">{o.customer_name ?? "—"}</td>
                   <td className="px-4 py-3 text-stone-700">{o.staff_name ?? "—"}</td>
                   <td className="px-4 py-3 text-stone-700">{o.payment_method}</td>

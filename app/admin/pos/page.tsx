@@ -47,6 +47,9 @@ type RecentOrder = {
   total: number;
   discount: number;
   tax: number;
+  container_fee: number;
+  container_count: number;
+  dining_option: "Dine-in" | "Take-out";
   payment_method: string;
   status: "completed" | "voided";
   customer_name: string | null;
@@ -64,6 +67,8 @@ type HeldOrder = {
   discountNote: string;
   selectedCustomer: Customer | null;
   paymentMethod: "Cash" | "GCash";
+  diningOption: "Dine-in" | "Take-out";
+  containerCount: number;
 };
 
 const DISCOUNT_PRESETS = ["Senior/PWD", "Staff meal", "Promo", "Damage/Comp"] as const;
@@ -103,6 +108,8 @@ export default function AdminPOSPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [discountPct, setDiscountPct] = useState(0);
   const [taxPct, setTaxPct] = useState(0);
+  const [diningOption, setDiningOption] = useState<"Dine-in" | "Take-out">("Dine-in");
+  const [containerCount, setContainerCount] = useState(1);
   const [discountReason, setDiscountReason] = useState("");
   const [discountNote, setDiscountNote] = useState("");
 
@@ -180,7 +187,7 @@ export default function AdminPOSPage() {
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id, created_at, subtotal, total, discount, tax, payment_method, status, customer:profiles!orders_customer_id_fkey(full_name), order_items(name, quantity, unit_price)"
+        "id, created_at, subtotal, total, discount, tax, container_fee, container_count, dining_option, payment_method, status, customer:profiles!orders_customer_id_fkey(full_name), order_items(name, quantity, unit_price)"
       )
       .eq("branch", b)
       .gte("created_at", startOfDay.toISOString())
@@ -197,6 +204,9 @@ export default function AdminPOSPage() {
         total: o.total,
         discount: o.discount,
         tax: o.tax,
+        container_fee: o.container_fee,
+        container_count: o.container_count,
+        dining_option: o.dining_option,
         payment_method: o.payment_method,
         status: o.status,
         customer_name: o.customer?.full_name ?? null,
@@ -319,10 +329,12 @@ export default function AdminPOSPage() {
     setCart((prev) => prev.filter((l) => l.key !== key));
   }
 
+  const CONTAINER_PRICE = 10;
   const subtotal = useMemo(() => cart.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0), [cart]);
   const discountAmount = useMemo(() => (subtotal * discountPct) / 100, [subtotal, discountPct]);
   const taxAmount = useMemo(() => ((subtotal - discountAmount) * taxPct) / 100, [subtotal, discountAmount, taxPct]);
-  const total = subtotal - discountAmount + taxAmount;
+  const containerFee = diningOption === "Take-out" ? containerCount * CONTAINER_PRICE : 0;
+  const total = subtotal - discountAmount + taxAmount + containerFee;
   const cashReceivedNum = parseFloat(cashReceived) || 0;
   const changeDue = cashReceivedNum - total;
 
@@ -376,7 +388,7 @@ export default function AdminPOSPage() {
   const discountNeedsNote = discountAmount > 0 && discountReason !== "Senior/PWD" && !discountNote.trim();
 
   async function completeOrder() {
-    if (cart.length === 0) return;
+    if (cart.length === 0 && containerFee === 0) return;
     if (discountNeedsNote) {
       setError("This discount needs a short note explaining why (shown next to the discount field).");
       return;
@@ -398,6 +410,9 @@ export default function AdminPOSPage() {
         subtotal,
         discount: discountAmount,
         tax: taxAmount,
+        container_fee: containerFee,
+        container_count: diningOption === "Take-out" ? containerCount : 0,
+        dining_option: diningOption,
         total,
         payment_method: paymentMethod,
         discount_reason: discountAmount > 0 ? discountReason || null : null,
@@ -412,16 +427,18 @@ export default function AdminPOSPage() {
       return;
     }
 
-    const { error: itemsError } = await supabase.from("order_items").insert(
-      cart.map((l) => ({
-        order_id: order.id,
-        menu_item_id: l.menuItemId,
-        name: l.name,
-        unit_price: l.unitPrice,
-        quantity: l.quantity,
-        line_total: l.unitPrice * l.quantity,
-      }))
-    );
+    const { error: itemsError } = cart.length === 0
+      ? { error: null }
+      : await supabase.from("order_items").insert(
+          cart.map((l) => ({
+            order_id: order.id,
+            menu_item_id: l.menuItemId,
+            name: l.name,
+            unit_price: l.unitPrice,
+            quantity: l.quantity,
+            line_total: l.unitPrice * l.quantity,
+          }))
+        );
 
     if (itemsError) {
       setCompleting(false);
@@ -449,6 +466,9 @@ export default function AdminPOSPage() {
       subtotal,
       discount: discountAmount,
       tax: taxAmount,
+      containerFee,
+      containerCount: diningOption === "Take-out" ? containerCount : 0,
+      diningOption,
       total,
       paymentMethod,
       customerName: selectedCustomer?.full_name ?? null,
@@ -473,6 +493,8 @@ export default function AdminPOSPage() {
     setCustomerResults([]);
     setCustomerQuery("");
     setCashReceived("");
+    setDiningOption("Dine-in");
+    setContainerCount(1);
     loadRecentOrders(branch);
   }
 
@@ -495,6 +517,9 @@ export default function AdminPOSPage() {
       subtotal: Number(o.subtotal),
       discount: Number(o.discount),
       tax: Number(o.tax),
+      containerFee: Number(o.container_fee),
+      containerCount: o.container_count,
+      diningOption: o.dining_option,
       total: Number(o.total),
       paymentMethod: o.payment_method,
       customerName: o.customer_name,
@@ -530,6 +555,8 @@ export default function AdminPOSPage() {
       discountNote,
       selectedCustomer,
       paymentMethod,
+      diningOption,
+      containerCount,
     };
     persistHeldOrders([held, ...heldOrders]);
     setCart([]);
@@ -541,6 +568,8 @@ export default function AdminPOSPage() {
     setCustomerResults([]);
     setCustomerQuery("");
     setCashReceived("");
+    setDiningOption("Dine-in");
+    setContainerCount(1);
   }
 
   function resumeHeldOrder(id: string) {
@@ -554,6 +583,8 @@ export default function AdminPOSPage() {
     setDiscountNote(held.discountNote);
     setSelectedCustomer(held.selectedCustomer);
     setPaymentMethod(held.paymentMethod);
+    setDiningOption(held.diningOption ?? "Dine-in");
+    setContainerCount(held.containerCount ?? 1);
     persistHeldOrders(heldOrders.filter((h) => h.id !== id));
   }
 
@@ -913,6 +944,40 @@ export default function AdminPOSPage() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-stone-200 pt-3">
+            <div className="flex gap-1.5">
+              {(["Dine-in", "Take-out"] as const).map((o) => (
+                <button
+                  key={o}
+                  onClick={() => setDiningOption(o)}
+                  className={`chip text-xs ${diningOption === o ? "chip-active" : ""}`}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+            {diningOption === "Take-out" && (
+              <label className="flex items-center gap-1.5 text-xs text-stone-600">
+                Containers
+                <button
+                  type="button"
+                  onClick={() => setContainerCount((c) => Math.max(1, c - 1))}
+                  className="h-6 w-6 rounded-full border border-stone-300 text-stone-600"
+                >
+                  −
+                </button>
+                <span className="w-5 text-center">{containerCount}</span>
+                <button
+                  type="button"
+                  onClick={() => setContainerCount((c) => c + 1)}
+                  className="h-6 w-6 rounded-full border border-stone-300 text-stone-600"
+                >
+                  +
+                </button>
+              </label>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-stone-200 pt-3">
             <label className="flex items-center gap-1.5 text-xs text-stone-600">
               Discount
               <input
@@ -980,6 +1045,12 @@ export default function AdminPOSPage() {
               <div className="flex justify-between text-stone-600">
                 <span>Tax ({taxPct}%)</span>
                 <span>+₱{taxAmount.toFixed(2)}</span>
+              </div>
+            )}
+            {containerFee > 0 && (
+              <div className="flex justify-between text-stone-600">
+                <span>Take-out container ×{containerCount}</span>
+                <span>+₱{containerFee.toFixed(2)}</span>
               </div>
             )}
             <div className="mt-1 flex justify-between text-base font-medium">
@@ -1123,7 +1194,7 @@ export default function AdminPOSPage() {
           <div className="mt-4 flex gap-2">
             <button
               onClick={completeOrder}
-              disabled={cart.length === 0 || completing || discountNeedsNote}
+              disabled={(cart.length === 0 && containerFee === 0) || completing || discountNeedsNote}
               className="btn-press flex-1 rounded-full bg-[#2D5A27] py-3 text-sm font-medium text-[#F9F6F0] disabled:opacity-50 disabled:active:scale-100"
             >
               {completing ? "Saving…" : `Complete Order — ₱${total.toFixed(2)}`}

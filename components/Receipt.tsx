@@ -10,6 +10,9 @@ export type ReceiptData = {
   subtotal: number;
   discount: number;
   tax: number;
+  containerFee: number;
+  containerCount: number;
+  diningOption: string;
   total: number;
   paymentMethod: string;
   customerName: string | null;
@@ -28,6 +31,7 @@ export default function Receipt({ data }: { data: ReceiptData }) {
       <p className="text-center">{data.branch} Branch</p>
       <p className="text-center">{new Date(data.createdAt).toLocaleString("en-PH")}</p>
       <p className="mt-1 text-center">Order #{data.id.slice(0, 8)}</p>
+      <p className="text-center">{data.diningOption}</p>
       <div className="my-2 border-t border-dashed border-black" />
       {data.items.map((l) => (
         <div key={l.key} className="flex justify-between">
@@ -53,6 +57,12 @@ export default function Receipt({ data }: { data: ReceiptData }) {
         <div className="flex justify-between">
           <span>Tax</span>
           <span>+₱{data.tax.toFixed(2)}</span>
+        </div>
+      )}
+      {data.containerFee > 0 && (
+        <div className="flex justify-between">
+          <span>Take-out container x{data.containerCount}</span>
+          <span>+₱{data.containerFee.toFixed(2)}</span>
         </div>
       )}
       <div className="flex justify-between font-bold">
