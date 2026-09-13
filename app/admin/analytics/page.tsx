@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { pdf } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import CoffeeLoader from "@/components/CoffeeLoader";
+import { Download } from "lucide-react";
+import AnalyticsReportPdf from "@/components/AnalyticsReportPdf";
 
 type RangeKey = "7d" | "30d";
 
@@ -34,6 +37,7 @@ export default function AdminAnalyticsPage() {
   const [barangayLoading, setBarangayLoading] = useState(true);
   const [showAllItems, setShowAllItems] = useState(false);
   const [showAllBarangays, setShowAllBarangays] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (access.role !== "super_admin") return;
@@ -156,6 +160,35 @@ export default function AdminAnalyticsPage() {
   const maxBarangay = Math.max(...barangays.map((b) => b.count), 0);
   const visibleBarangays = showAllBarangays ? barangays : barangays.slice(0, 5);
 
+  async function handleDownloadPdf() {
+    setDownloadingPdf(true);
+    try {
+      const blob = await pdf(
+        <AnalyticsReportPdf
+          range={range}
+          generatedAt={new Date()}
+          logoSrc={`${window.location.origin}/logo_sns.jpg`}
+          totals={totals}
+          topItems={topItems}
+          hourly={hourly}
+          barangays={barangays}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `sip-savor-spot-analytics-${range}-${dateStamp}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   if (!access.loading && access.role !== "super_admin") {
     return (
       <div>
@@ -167,8 +200,20 @@ export default function AdminAnalyticsPage() {
 
   return (
     <div>
-      <h2 className="font-serif text-2xl text-[#2D5A27]">Analytics</h2>
-      <p className="mt-1 text-sm text-stone-600">Revenue trends, Palindan vs. Uptown.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-2xl text-[#2D5A27]">Analytics</h2>
+          <p className="mt-1 text-sm text-stone-600">Revenue trends, Palindan vs. Uptown.</p>
+        </div>
+        <button
+          onClick={handleDownloadPdf}
+          disabled={downloadingPdf || loading || itemsLoading || barangayLoading}
+          className="flex items-center gap-2 rounded-full bg-[#2D5A27] px-4 py-2.5 text-sm font-medium text-[#F9F6F0] disabled:opacity-60"
+        >
+          <Download size={16} strokeWidth={2} />
+          {downloadingPdf ? "Preparing PDF..." : "Download PDF Report"}
+        </button>
+      </div>
 
       <div className="mt-5 flex gap-2">
         {(["7d", "30d"] as const).map((r) => (
