@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import CoffeeLoader from "@/components/CoffeeLoader";
 import { Download } from "lucide-react";
-import AnalyticsReportPdf from "@/components/AnalyticsReportPdf";
+import AnalyticsReportPdf, { type ReportSection } from "@/components/AnalyticsReportPdf";
 
 type RangeKey = "7d" | "30d";
 
@@ -37,7 +37,7 @@ export default function AdminAnalyticsPage() {
   const [barangayLoading, setBarangayLoading] = useState(true);
   const [showAllItems, setShowAllItems] = useState(false);
   const [showAllBarangays, setShowAllBarangays] = useState(false);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState<"all" | ReportSection | null>(null);
 
   useEffect(() => {
     if (access.role !== "super_admin") return;
@@ -160,14 +160,23 @@ export default function AdminAnalyticsPage() {
   const maxBarangay = Math.max(...barangays.map((b) => b.count), 0);
   const visibleBarangays = showAllBarangays ? barangays : barangays.slice(0, 5);
 
-  async function handleDownloadPdf() {
-    setDownloadingPdf(true);
+  const SECTION_FILE_SLUG: Record<ReportSection, string> = {
+    revenue: "revenue",
+    items: "best-selling-items",
+    hourly: "busiest-hour",
+    barangay: "customers-by-barangay",
+  };
+
+  async function handleDownloadPdf(sections?: ReportSection[]) {
+    setDownloadingPdf(sections && sections.length === 1 ? sections[0] : "all");
     try {
       const blob = await pdf(
         <AnalyticsReportPdf
           range={range}
           generatedAt={new Date()}
           logoSrc={`${window.location.origin}/logo_sns.jpg`}
+          sections={sections}
+          days={days}
           totals={totals}
           topItems={topItems}
           hourly={hourly}
@@ -178,15 +187,30 @@ export default function AdminAnalyticsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       const dateStamp = new Date().toISOString().slice(0, 10);
+      const slug = sections && sections.length === 1 ? SECTION_FILE_SLUG[sections[0]] : "analytics";
       a.href = url;
-      a.download = `sip-savor-spot-analytics-${range}-${dateStamp}.pdf`;
+      a.download = `sip-savor-spot-${slug}-${range}-${dateStamp}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
     } finally {
-      setDownloadingPdf(false);
+      setDownloadingPdf(null);
     }
+  }
+
+  function SectionDownloadButton({ section, label }: { section: ReportSection; label: string }) {
+    return (
+      <button
+        onClick={() => handleDownloadPdf([section])}
+        disabled={downloadingPdf !== null || loading || itemsLoading || barangayLoading}
+        title={`Download ${label} as PDF`}
+        className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#2D5A27]/20 px-3 py-1.5 text-xs font-medium text-[#2D5A27] hover:bg-[#2D5A27]/5 disabled:opacity-50"
+      >
+        <Download size={12} strokeWidth={2} />
+        {downloadingPdf === section ? "Preparing..." : "PDF"}
+      </button>
+    );
   }
 
   if (!access.loading && access.role !== "super_admin") {
@@ -206,12 +230,12 @@ export default function AdminAnalyticsPage() {
           <p className="mt-1 text-sm text-stone-600">Revenue trends, Palindan vs. Uptown.</p>
         </div>
         <button
-          onClick={handleDownloadPdf}
-          disabled={downloadingPdf || loading || itemsLoading || barangayLoading}
+          onClick={() => handleDownloadPdf()}
+          disabled={downloadingPdf !== null || loading || itemsLoading || barangayLoading}
           className="flex items-center gap-2 rounded-full bg-[#2D5A27] px-4 py-2.5 text-sm font-medium text-[#F9F6F0] disabled:opacity-60"
         >
           <Download size={16} strokeWidth={2} />
-          {downloadingPdf ? "Preparing PDF..." : "Download PDF Report"}
+          {downloadingPdf === "all" ? "Preparing PDF..." : "Download PDF Report"}
         </button>
       </div>
 
@@ -227,13 +251,16 @@ export default function AdminAnalyticsPage() {
         ))}
       </div>
 
-      <div className="mt-4 flex gap-4 text-xs text-stone-500">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-[#2D5A27]" /> Palindan
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-[#2D5A27]/35" /> Uptown
-        </span>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="flex gap-4 text-xs text-stone-500">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-sm bg-[#2D5A27]" /> Palindan
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-sm bg-[#2D5A27]/35" /> Uptown
+          </span>
+        </div>
+        <SectionDownloadButton section="revenue" label="Revenue Summary" />
       </div>
 
       <div className="mt-3 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
@@ -295,9 +322,12 @@ export default function AdminAnalyticsPage() {
         })}
       </div>
 
-      <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">
-        Best-Selling Items — {range === "7d" ? "Last 7 days" : "Last 30 days"}
-      </h3>
+      <div className="mt-10 flex items-center justify-between gap-3">
+        <h3 className="font-serif text-lg text-[#2D5A27]">
+          Best-Selling Items — {range === "7d" ? "Last 7 days" : "Last 30 days"}
+        </h3>
+        <SectionDownloadButton section="items" label="Best-Selling Items" />
+      </div>
       <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
         {itemsLoading ? (
           <CoffeeLoader size={56} />
@@ -338,9 +368,12 @@ export default function AdminAnalyticsPage() {
         )}
       </div>
 
-      <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">
-        Busiest Hour of Day — {range === "7d" ? "Last 7 days" : "Last 30 days"}
-      </h3>
+      <div className="mt-10 flex items-center justify-between gap-3">
+        <h3 className="font-serif text-lg text-[#2D5A27]">
+          Busiest Hour of Day — {range === "7d" ? "Last 7 days" : "Last 30 days"}
+        </h3>
+        <SectionDownloadButton section="hourly" label="Busiest Hour of Day" />
+      </div>
       <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
         {loading ? (
           <CoffeeLoader size={56} />
@@ -371,7 +404,10 @@ export default function AdminAnalyticsPage() {
         )}
       </div>
 
-      <h3 className="mt-10 font-serif text-lg text-[#2D5A27]">Customers by Barangay</h3>
+      <div className="mt-10 flex items-center justify-between gap-3">
+        <h3 className="font-serif text-lg text-[#2D5A27]">Customers by Barangay</h3>
+        <SectionDownloadButton section="barangay" label="Customers by Barangay" />
+      </div>
       <p className="mt-1 text-sm text-stone-600">Where the loyalty program's members live — all-time, not scoped to the period above.</p>
       <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
         {barangayLoading ? (
