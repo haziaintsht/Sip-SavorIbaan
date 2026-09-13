@@ -127,6 +127,11 @@ export default function Navbar({
 
           {loggedIn ? (
             <>
+              {!isStaff && (
+                <Link href="/account" className="text-sm text-stone-700 hover:text-[#2D5A27]">
+                  Account
+                </Link>
+              )}
               {isStaff && (
                 <Link href="/admin" className="text-sm text-stone-700 hover:text-[#2D5A27]">
                   Admin Panel
@@ -211,6 +216,11 @@ export default function Navbar({
               </button>
               {loggedIn ? (
                 <>
+                  {!isStaff && (
+                    <Link href="/account" className="rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-[#2D5A27]/5">
+                      Account
+                    </Link>
+                  )}
                   {isStaff && (
                     <Link href="/admin" className="rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-[#2D5A27]/5">
                       Admin Panel
