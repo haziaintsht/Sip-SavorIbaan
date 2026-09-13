@@ -9,6 +9,7 @@ import LoyaltyCard from "@/components/LoyaltyCard";
 import Toast, { type ToastData } from "@/components/Toast";
 import CoffeeLoader from "@/components/CoffeeLoader";
 import EmptyState from "@/components/EmptyState";
+import CardCompleteModal from "@/components/CardCompleteModal";
 
 type LoyaltyCardRow = {
   id: string;
@@ -18,9 +19,15 @@ type LoyaltyCardRow = {
 
 type StampLog = {
   id: string;
-  action: "ADD_STAMP" | "REDEEM_REWARD";
+  action: "ADD_STAMP" | "REMOVE_STAMP" | "REDEEM_REWARD";
   branch_location: string | null;
   created_at: string;
+};
+
+const STAMP_ACTION_LABEL: Record<StampLog["action"], string> = {
+  ADD_STAMP: "Stamp added",
+  REMOVE_STAMP: "Stamp removed",
+  REDEEM_REWARD: "Reward redeemed",
 };
 
 type OrderHistoryRow = {
@@ -41,6 +48,7 @@ export default function DashboardPage() {
   const [orders, setOrders] = useState<OrderHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastData | null>(null);
+  const [showCardComplete, setShowCardComplete] = useState(false);
   const prevCardRef = useRef<LoyaltyCardRow | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -126,7 +134,11 @@ export default function DashboardPage() {
                 if (updated.total_earned_rewards > prev.total_earned_rewards) {
                   fireToast("Reward redeemed — enjoy your free drink!", PartyPopper);
                 } else if (updated.stamp_count > prev.stamp_count) {
-                  fireToast("You've received a stamp!", Coffee);
+                  if (updated.stamp_count >= 10) {
+                    setShowCardComplete(true);
+                  } else {
+                    fireToast("You've received a stamp!", Coffee);
+                  }
                 }
               }
               prevCardRef.current = updated;
@@ -176,6 +188,7 @@ export default function DashboardPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-14">
       <Toast toast={toast} onDismiss={() => setToast(null)} />
+      {showCardComplete && <CardCompleteModal onClose={() => setShowCardComplete(false)} />}
       <h1 className="font-serif text-3xl text-[#2D5A27]">Hi, {fullName || "there"}</h1>
       <p className="mt-1 text-sm text-stone-600">
         Show your QR code at the counter to earn a stamp with every qualifying order — or just tell us your
@@ -206,7 +219,7 @@ export default function DashboardPage() {
           {logs.map((log) => (
             <li key={log.id} className="flex items-center justify-between py-3 text-sm">
               <span className="text-stone-700">
-                {log.action === "ADD_STAMP" ? "Stamp added" : "Reward redeemed"}
+                {STAMP_ACTION_LABEL[log.action]}
                 {log.branch_location ? ` · ${log.branch_location}` : ""}
               </span>
               <span className="text-stone-400">

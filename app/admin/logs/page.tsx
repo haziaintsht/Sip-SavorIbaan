@@ -2,11 +2,23 @@ import { createClient } from "@/lib/supabase/server";
 
 type LogRow = {
   id: string;
-  action: "ADD_STAMP" | "REDEEM_REWARD";
+  action: "ADD_STAMP" | "REMOVE_STAMP" | "REDEEM_REWARD";
   branch_location: string | null;
   created_at: string;
   loyalty_cards: { profiles: { full_name: string } | null } | null;
   admin: { full_name: string } | null;
+};
+
+const ACTION_LABEL: Record<LogRow["action"], string> = {
+  ADD_STAMP: "Stamp added",
+  REMOVE_STAMP: "Stamp removed",
+  REDEEM_REWARD: "Reward redeemed",
+};
+
+const ACTION_STYLE: Record<LogRow["action"], string> = {
+  ADD_STAMP: "bg-[#2D5A27]/10 text-[#2D5A27]",
+  REMOVE_STAMP: "bg-red-100 text-red-700",
+  REDEEM_REWARD: "bg-amber-100 text-amber-800",
 };
 
 export default async function AdminLogsPage() {
@@ -51,14 +63,8 @@ export default async function AdminLogsPage() {
                   {log.loyalty_cards?.profiles?.full_name ?? "—"}
                 </td>
                 <td className="px-5 py-3">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs ${
-                      log.action === "ADD_STAMP"
-                        ? "bg-[#2D5A27]/10 text-[#2D5A27]"
-                        : "bg-amber-100 text-amber-800"
-                    }`}
-                  >
-                    {log.action === "ADD_STAMP" ? "Stamp added" : "Reward redeemed"}
+                  <span className={`rounded-full px-2.5 py-1 text-xs ${ACTION_STYLE[log.action]}`}>
+                    {ACTION_LABEL[log.action]}
                   </span>
                 </td>
                 <td className="px-5 py-3 text-stone-700">{log.branch_location ?? "—"}</td>
