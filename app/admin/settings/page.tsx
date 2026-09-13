@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import CoffeeLoader from "@/components/CoffeeLoader";
@@ -19,6 +19,8 @@ type BranchInfo = {
 export default function AdminSettingsPage() {
   const supabase = createClient();
   const access = useAdminAccess();
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const [branches, setBranches] = useState<BranchInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +71,32 @@ export default function AdminSettingsPage() {
     }
     setSavedBranch(b.branch);
     setTimeout(() => setSavedBranch(null), 2500);
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const res = await fetch("/api/admin/export");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Export failed");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `sip-savor-spot-backup-${dateStamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
   }
 
   if (!access.loading && access.role !== "super_admin") {
@@ -181,6 +209,23 @@ export default function AdminSettingsPage() {
           ))}
         </div>
       )}
+
+      <div className="mt-10 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+        <h3 className="font-serif text-lg text-[#2D5A27]">Data Backup</h3>
+        <p className="mt-1 text-sm text-stone-600">
+          Download a full export of your business data — customers, orders, stamps, menu, reviews, and more — as a
+          single JSON file. Good to keep on hand in case you ever need it.
+        </p>
+        {exportError && <p className="mt-2 text-sm text-red-600">{exportError}</p>}
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="mt-4 flex items-center gap-2 rounded-full bg-[#2D5A27] px-5 py-2.5 text-sm font-medium text-[#F9F6F0] disabled:opacity-60"
+        >
+          <Download size={16} strokeWidth={2} />
+          {exporting ? "Preparing export..." : "Export everything"}
+        </button>
+      </div>
     </div>
   );
 }

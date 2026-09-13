@@ -117,9 +117,12 @@ export default function AdminPOSPage() {
     orderCount: number;
   } | null>(null);
   const [countedCash, setCountedCash] = useState("");
+  const [handoffNote, setHandoffNote] = useState("");
   const [closeoutHistory, setCloseoutHistory] = useState<
     { id: string; created_at: string; cash_total: number; gcash_total: number; counted_cash: number; variance: number }[]
   >([]);
+  const [lastHandoffNote, setLastHandoffNote] = useState<{ note: string; at: string } | null>(null);
+  const [handoffNoteDismissed, setHandoffNoteDismissed] = useState(false);
 
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
@@ -213,11 +216,13 @@ export default function AdminPOSPage() {
   async function loadCloseoutHistory(b: Branch) {
     const { data } = await supabase
       .from("shift_closeouts")
-      .select("id, created_at, cash_total, gcash_total, counted_cash, variance")
+      .select("id, created_at, cash_total, gcash_total, counted_cash, variance, handoff_note")
       .eq("branch", b)
       .order("created_at", { ascending: false })
       .limit(5);
     setCloseoutHistory(data ?? []);
+    const lastWithNote = (data ?? []).find((c) => c.handoff_note && c.handoff_note.trim().length > 0);
+    setLastHandoffNote(lastWithNote ? { note: lastWithNote.handoff_note as string, at: lastWithNote.created_at } : null);
   }
 
   useEffect(() => {
@@ -594,6 +599,7 @@ export default function AdminPOSPage() {
       gcash_total: closeoutDraft.gcashTotal,
       counted_cash: counted,
       variance: counted - closeoutDraft.cashTotal,
+      handoff_note: handoffNote.trim() || null,
     });
 
     setClosingShift(false);
@@ -604,6 +610,7 @@ export default function AdminPOSPage() {
     setShowCloseShift(false);
     setCloseoutDraft(null);
     setCountedCash("");
+    setHandoffNote("");
     loadCloseoutHistory(branch);
   }
 
@@ -637,6 +644,18 @@ export default function AdminPOSPage() {
           </div>
         )}
       </div>
+
+      {lastHandoffNote && !handoffNoteDismissed && (
+        <div className="mt-4 flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 print:hidden">
+          <div>
+            <p className="font-medium">Note from last shift</p>
+            <p className="mt-0.5">{lastHandoffNote.note}</p>
+          </div>
+          <button onClick={() => setHandoffNoteDismissed(true)} className="shrink-0 text-xs text-amber-700 underline">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-6 md:grid-cols-[minmax(0,1fr)_360px] print:hidden">
         {/* Menu picker */}
@@ -1190,6 +1209,18 @@ export default function AdminPOSPage() {
               </p>
             )}
 
+            <label className="mt-4 flex flex-col gap-1.5 text-sm text-stone-700">
+              Note for the next shift (optional)
+              <textarea
+                value={handoffNote}
+                onChange={(e) => setHandoffNote(e.target.value)}
+                rows={2}
+                maxLength={300}
+                placeholder="e.g. machine acting up, low on cups"
+                className="input resize-none"
+              />
+            </label>
+
             <div className="mt-5 flex gap-2">
               <button
                 onClick={submitCloseShift}
@@ -1202,6 +1233,7 @@ export default function AdminPOSPage() {
                 onClick={() => {
                   setShowCloseShift(false);
                   setCloseoutDraft(null);
+                  setHandoffNote("");
                 }}
                 className="rounded-full border border-stone-300 px-4 py-2.5 text-sm text-stone-600"
               >

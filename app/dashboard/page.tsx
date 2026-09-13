@@ -10,6 +10,7 @@ import Toast, { type ToastData } from "@/components/Toast";
 import CoffeeLoader from "@/components/CoffeeLoader";
 import EmptyState from "@/components/EmptyState";
 import CardCompleteModal from "@/components/CardCompleteModal";
+import ReviewSection from "@/components/ReviewSection";
 
 type LoyaltyCardRow = {
   id: string;
@@ -265,6 +266,8 @@ export default function DashboardPage() {
           ))}
         </ul>
       </section>
+
+      <ReviewSection userId={userId} fullName={fullName} />
     </main>
   );
 }

@@ -20,6 +20,8 @@ import {
   UserCog,
   BarChart3,
   Settings,
+  Star,
+  ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminAccess } from "@/lib/useAdminAccess";
@@ -56,11 +58,17 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Catalog",
-    items: [{ href: "/admin/menu", label: "Menu", icon: Coffee }],
+    items: [
+      { href: "/admin/menu", label: "Menu", icon: Coffee },
+      { href: "/admin/reviews", label: "Reviews", icon: Star, superAdminOnly: true },
+    ],
   },
   {
     label: "System",
-    items: [{ href: "/admin/logs", label: "Activity Log", icon: History }],
+    items: [
+      { href: "/admin/logs", label: "Activity Log", icon: History },
+      { href: "/admin/audit-log", label: "Audit Log", icon: ShieldCheck, superAdminOnly: true },
+    ],
   },
   {
     label: "Management",

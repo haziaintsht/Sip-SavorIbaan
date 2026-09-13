@@ -29,56 +29,29 @@ const highlights = [
   { title: "Live Music", desc: "Acoustic sets on weekends — check our socials for the schedule." },
 ];
 
-// Illustrative sample quotes with locally-flavored names — swap in real
-// customer reviews as they come in.
-const testimonials = [
+// Fallback only if the reviews table is ever empty (shouldn't happen —
+// migration 023 seeds these same rows as pre-approved reviews).
+const FALLBACK_TESTIMONIALS = [
   {
     quote:
       "Sobrang sarap ng kape dito, tapos may WiFi pa for work! Regular na ako dito sa Palindan, konti na lang stamps ko para sa free drink.",
     name: "Marites Magsino",
     branch: "Palindan Branch",
+    rating: 5,
   },
   {
     quote:
       "Ang bait ng staff dito sa Uptown, parang barkada mo lang! Favorite ko yung Signature Glazed Chicken, sulit na sulit.",
     name: "Jun Pesigan",
     branch: "Uptown Branch",
+    rating: 5,
   },
   {
     quote:
       "Go-to spot namin ng family every weekend. Cozy yung ambiance, maganda din for chikahan. Sulit yung loyalty card, libre na kape after 10 stamps!",
     name: "Grace Villanueva",
     branch: "Palindan Branch",
-  },
-  {
-    quote:
-      "Dinala ko yung aso ko dito last week, ayos lang pala! Alfresco pa yung seating so sobrang relax ng vibe. Balik-balikan talaga.",
-    name: "Ramon Macatangay",
-    branch: "Uptown Branch",
-  },
-  {
-    quote:
-      "May live music sila tuwing weekend, sobrang saya! Dito na lang kami palagi mag-hangout ng mga kaibigan ko every Saturday night.",
-    name: "Baby Marasigan",
-    branch: "Palindan Branch",
-  },
-  {
-    quote:
-      "Maluwag yung parking kaya OK na OK pag maramihan kami. Yung mga blended drinks nila, panalo lagi — ilang beses na kami bumalik dito.",
-    name: "Ella Panganiban",
-    branch: "Uptown Branch",
-  },
-  {
-    quote:
-      "First time ko dito nung nag-work from home ako, ayun na-loyalty program pa pala ako in-add. Tuwang-tuwa ako sa stamp card nila, ang cute!",
-    name: "Noel Ilagan",
-    branch: "Palindan Branch",
-  },
-  {
-    quote:
-      "Naka-ilang stamp na ako dito sa Uptown, sulit talaga bawat order. Yung rice meals nila, laking tulong pag busy day sa trabaho.",
-    name: "Tin Mendoza",
-    branch: "Uptown Branch",
+    rating: 5,
   },
 ];
 
@@ -123,6 +96,23 @@ export default async function HomePage() {
           mapQuery: b.map_lat !== null && b.map_lng !== null ? `${b.map_lat},${b.map_lng}` : `${b.address}, Ibaan, Batangas`,
         }))
       : FALLBACK_BRANCHES;
+
+  const { data: reviewRows } = await supabase
+    .from("reviews")
+    .select("full_name, branch, rating, body")
+    .eq("status", "approved")
+    .order("created_at", { ascending: false })
+    .limit(24);
+
+  const testimonials =
+    reviewRows && reviewRows.length > 0
+      ? reviewRows.map((r) => ({
+          quote: r.body,
+          name: r.full_name,
+          branch: r.branch ? `${r.branch} Branch` : "",
+          rating: r.rating,
+        }))
+      : FALLBACK_TESTIMONIALS;
 
   return (
     <main>

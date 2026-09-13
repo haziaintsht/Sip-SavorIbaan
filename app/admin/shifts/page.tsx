@@ -16,6 +16,7 @@ type ClosetoutRow = {
   gcash_total: number;
   counted_cash: number;
   variance: number;
+  handoff_note: string | null;
   admin: { full_name: string } | null;
 };
 
@@ -30,7 +31,7 @@ export default function AdminShiftsPage() {
     supabase
       .from("shift_closeouts")
       .select(
-        "id, branch, created_at, period_start, order_count, cash_total, gcash_total, counted_cash, variance, admin:profiles!shift_closeouts_admin_id_fkey(full_name)"
+        "id, branch, created_at, period_start, order_count, cash_total, gcash_total, counted_cash, variance, handoff_note, admin:profiles!shift_closeouts_admin_id_fkey(full_name)"
       )
       .order("created_at", { ascending: false })
       .limit(100)
@@ -95,12 +96,13 @@ export default function AdminShiftsPage() {
               <th className="px-5 py-3 font-medium">Counted</th>
               <th className="px-5 py-3 font-medium">GCash</th>
               <th className="px-5 py-3 font-medium">Variance</th>
+              <th className="px-5 py-3 font-medium">Note</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-5 py-8">
+                <td colSpan={9} className="px-5 py-8">
                   <CoffeeLoader size={36} label={null} />
                 </td>
               </tr>
@@ -138,13 +140,16 @@ export default function AdminShiftsPage() {
                         : `−₱${Math.abs(Number(c.variance)).toFixed(2)}`}
                     </span>
                   </td>
+                  <td className="max-w-[200px] truncate px-5 py-3 text-stone-500" title={c.handoff_note ?? undefined}>
+                    {c.handoff_note || "—"}
+                  </td>
                 </tr>
               ))
             )}
 
             {!loading && visible.length === 0 && !error && (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={9}>
                   <EmptyState
                     icon={Wallet}
                     message={onlyVariances ? "No shifts with a variance." : "No shift close-outs yet."}
