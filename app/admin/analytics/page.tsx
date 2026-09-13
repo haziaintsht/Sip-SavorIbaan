@@ -8,7 +8,9 @@ import CoffeeLoader from "@/components/CoffeeLoader";
 import { Download } from "lucide-react";
 import AnalyticsReportPdf, { type ReportSection } from "@/components/AnalyticsReportPdf";
 
-type RangeKey = "7d" | "30d";
+type RangeMode = "7d" | "30d" | "custom";
+type BranchTotals = { Palindan: { revenue: number; orders: number }; Uptown: { revenue: number; orders: number } };
+type Delta = { text: string; positive: boolean } | null;
 
 type DayRow = { date: string; Palindan: number; Uptown: number };
 type ItemRow = { name: string; quantity: number; line_total: number; orders: { created_at: string } | null };
@@ -24,12 +26,60 @@ function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
+function computeBounds(mode: RangeMode, customStart: string, customEnd: string): { start: Date; end: Date } | null {
+  if (mode === "custom") {
+    if (!customStart || !customEnd) return null;
+    const start = new Date(`${customStart}T00:00:00`);
+    const end = new Date(`${customEnd}T23:59:59.999`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return null;
+    return { start, end };
+  }
+  const dayCount = mode === "30d" ? 30 : 7;
+  const end = new Date();
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (dayCount - 1));
+  return { start, end };
+}
+
+// An equal-length window immediately before the current one, so "this
+// custom range" and "the same number of days before it" stay comparable.
+function previousBounds(start: Date, end: Date) {
+  const spanMs = end.getTime() - start.getTime();
+  const prevEnd = new Date(start.getTime() - 1);
+  const prevStart = new Date(prevEnd.getTime() - spanMs);
+  return { start: prevStart, end: prevEnd };
+}
+
+function computeDelta(curr: number, prev: number): Delta {
+  if (prev === 0 && curr === 0) return null;
+  if (prev === 0) return { text: "New", positive: true };
+  const pct = ((curr - prev) / prev) * 100;
+  return { text: `${pct >= 0 ? "+" : ""}${pct.toFixed(0)}%`, positive: pct >= 0 };
+}
+
+function sumTotals(rows: { branch: string; total: number }[]): BranchTotals {
+  const totals: BranchTotals = { Palindan: { revenue: 0, orders: 0 }, Uptown: { revenue: 0, orders: 0 } };
+  for (const r of rows) {
+    if (r.branch === "Palindan" || r.branch === "Uptown") {
+      totals[r.branch].revenue += Number(r.total);
+      totals[r.branch].orders += 1;
+    }
+  }
+  return totals;
+}
+
+const todayStr = new Date().toISOString().slice(0, 10);
+
 export default function AdminAnalyticsPage() {
   const supabase = createClient();
   const access = useAdminAccess();
 
-  const [range, setRange] = useState<RangeKey>("7d");
+  const [rangeMode, setRangeMode] = useState<RangeMode>("7d");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [rows, setRows] = useState<{ branch: string; total: number; created_at: string }[]>([]);
+  const [prevRows, setPrevRows] = useState<{ branch: string; total: number; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [itemRows, setItemRows] = useState<ItemRow[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
@@ -39,35 +89,44 @@ export default function AdminAnalyticsPage() {
   const [showAllBarangays, setShowAllBarangays] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState<"all" | ReportSection | null>(null);
 
+  const bounds = useMemo(() => computeBounds(rangeMode, customStart, customEnd), [rangeMode, customStart, customEnd]);
+
   useEffect(() => {
-    if (access.role !== "super_admin") return;
+    if (access.role !== "super_admin" || !bounds) return;
     setLoading(true);
     setItemsLoading(true);
-    const days = range === "7d" ? 7 : 30;
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - (days - 1));
+    const prev = previousBounds(bounds.start, bounds.end);
 
     supabase
       .from("orders")
       .select("branch, total, created_at")
       .eq("status", "completed")
-      .gte("created_at", start.toISOString())
+      .gte("created_at", bounds.start.toISOString())
+      .lte("created_at", bounds.end.toISOString())
       .then(({ data }) => {
         setRows(data ?? []);
         setLoading(false);
       });
 
     supabase
+      .from("orders")
+      .select("branch, total, created_at")
+      .eq("status", "completed")
+      .gte("created_at", prev.start.toISOString())
+      .lte("created_at", prev.end.toISOString())
+      .then(({ data }) => setPrevRows(data ?? []));
+
+    supabase
       .from("order_items")
       .select("name, quantity, line_total, orders!inner(created_at, status)")
       .eq("orders.status", "completed")
-      .gte("orders.created_at", start.toISOString())
+      .gte("orders.created_at", bounds.start.toISOString())
+      .lte("orders.created_at", bounds.end.toISOString())
       .then(({ data }) => {
         setItemRows((data as unknown as ItemRow[]) ?? []);
         setItemsLoading(false);
       });
-  }, [supabase, range, access.role]);
+  }, [supabase, bounds, access.role]);
 
   // Customer base by barangay — a standing demographic picture, not scoped
   // to the revenue-period toggle above.
@@ -84,33 +143,30 @@ export default function AdminAnalyticsPage() {
   }, [supabase, access.role]);
 
   const { days, totals } = useMemo(() => {
-    const dayCount = range === "7d" ? 7 : 30;
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - (dayCount - 1));
-
+    if (!bounds) return { days: [] as DayRow[], totals: sumTotals([]) };
     const byDay = new Map<string, DayRow>();
-    for (let i = 0; i < dayCount; i++) {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
-      byDay.set(dateKey(d), { date: dateKey(d), Palindan: 0, Uptown: 0 });
+    const cursor = new Date(bounds.start);
+    cursor.setHours(0, 0, 0, 0);
+    const endDay = new Date(bounds.end);
+    endDay.setHours(0, 0, 0, 0);
+    while (cursor <= endDay) {
+      byDay.set(dateKey(cursor), { date: dateKey(cursor), Palindan: 0, Uptown: 0 });
+      cursor.setDate(cursor.getDate() + 1);
     }
-    const totals = { Palindan: { revenue: 0, orders: 0 }, Uptown: { revenue: 0, orders: 0 } };
     for (const r of rows) {
       const key = dateKey(new Date(r.created_at));
       const bucket = byDay.get(key);
       if (bucket && (r.branch === "Palindan" || r.branch === "Uptown")) {
         bucket[r.branch] += Number(r.total);
       }
-      if (r.branch === "Palindan" || r.branch === "Uptown") {
-        totals[r.branch].revenue += Number(r.total);
-        totals[r.branch].orders += 1;
-      }
     }
-    return { days: [...byDay.values()], totals };
-  }, [rows, range]);
+    return { days: [...byDay.values()], totals: sumTotals(rows) };
+  }, [rows, bounds]);
+
+  const prevTotals = useMemo(() => sumTotals(prevRows), [prevRows]);
 
   const maxDay = Math.max(...days.map((d) => Math.max(d.Palindan, d.Uptown)), 0);
+  const dayLabelEvery = days.length > 14 ? Math.ceil(days.length / 10) : 1;
 
   const topItems = useMemo(() => {
     const byName = new Map<string, TopItem>();
@@ -160,6 +216,17 @@ export default function AdminAnalyticsPage() {
   const maxBarangay = Math.max(...barangays.map((b) => b.count), 0);
   const visibleBarangays = showAllBarangays ? barangays : barangays.slice(0, 5);
 
+  const shortDate = (d: Date) => d.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+  const periodLabel =
+    rangeMode === "7d"
+      ? "Last 7 days"
+      : rangeMode === "30d"
+        ? "Last 30 days"
+        : bounds
+          ? `${shortDate(bounds.start)} – ${bounds.end.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}`
+          : "Custom range";
+  const previousLabel = rangeMode === "custom" ? "the previous period" : `the previous ${rangeMode === "30d" ? 30 : 7} days`;
+
   const SECTION_FILE_SLUG: Record<ReportSection, string> = {
     revenue: "revenue",
     items: "best-selling-items",
@@ -172,12 +239,14 @@ export default function AdminAnalyticsPage() {
     try {
       const blob = await pdf(
         <AnalyticsReportPdf
-          range={range}
+          periodLabel={periodLabel}
+          previousLabel={previousLabel}
           generatedAt={new Date()}
           logoSrc={`${window.location.origin}/logo_sns.jpg`}
           sections={sections}
           days={days}
           totals={totals}
+          prevTotals={prevTotals}
           topItems={topItems}
           hourly={hourly}
           barangays={barangays}
@@ -188,8 +257,10 @@ export default function AdminAnalyticsPage() {
       const a = document.createElement("a");
       const dateStamp = new Date().toISOString().slice(0, 10);
       const slug = sections && sections.length === 1 ? SECTION_FILE_SLUG[sections[0]] : "analytics";
+      const rangeTag =
+        rangeMode === "custom" && bounds ? `${customStart}_to_${customEnd}` : rangeMode;
       a.href = url;
-      a.download = `sip-savor-spot-${slug}-${range}-${dateStamp}.pdf`;
+      a.download = `sip-savor-spot-${slug}-${rangeTag}-${dateStamp}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -210,6 +281,15 @@ export default function AdminAnalyticsPage() {
         <Download size={12} strokeWidth={2} />
         {downloadingPdf === section ? "Preparing..." : "PDF"}
       </button>
+    );
+  }
+
+  function DeltaBadge({ delta }: { delta: Delta }) {
+    if (!delta) return null;
+    return (
+      <p className={`mt-0.5 text-[10px] font-medium ${delta.positive ? "text-[#2D5A27]" : "text-red-600"}`}>
+        {delta.text} vs. {previousLabel}
+      </p>
     );
   }
 
@@ -239,17 +319,40 @@ export default function AdminAnalyticsPage() {
         </button>
       </div>
 
-      <div className="mt-5 flex gap-2">
-        {(["7d", "30d"] as const).map((r) => (
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        {(["7d", "30d", "custom"] as const).map((r) => (
           <button
             key={r}
-            onClick={() => setRange(r)}
-            className={`chip ${range === r ? "chip-active" : ""}`}
+            onClick={() => setRangeMode(r)}
+            className={`chip ${rangeMode === r ? "chip-active" : ""}`}
           >
-            {r === "7d" ? "Last 7 days" : "Last 30 days"}
+            {r === "7d" ? "Last 7 days" : r === "30d" ? "Last 30 days" : "Custom range"}
           </button>
         ))}
+        {rangeMode === "custom" && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={customStart}
+              max={customEnd || todayStr}
+              onChange={(e) => setCustomStart(e.target.value)}
+              className="input w-[9.5rem] py-1.5 text-xs"
+            />
+            <span className="text-xs text-stone-400">to</span>
+            <input
+              type="date"
+              value={customEnd}
+              min={customStart || undefined}
+              max={todayStr}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              className="input w-[9.5rem] py-1.5 text-xs"
+            />
+          </div>
+        )}
       </div>
+      {rangeMode === "custom" && (customStart || customEnd) && !bounds && (
+        <p className="mt-2 text-xs text-red-600">Pick a start and end date — end must be on or after start.</p>
+      )}
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <div className="flex gap-4 text-xs text-stone-500">
@@ -266,11 +369,13 @@ export default function AdminAnalyticsPage() {
       <div className="mt-3 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
         {loading ? (
           <CoffeeLoader size={56} />
+        ) : !bounds ? (
+          <p className="text-sm text-stone-500">Pick a valid date range above.</p>
         ) : maxDay === 0 ? (
           <p className="text-sm text-stone-500">No completed orders in this period.</p>
         ) : (
           <div className="flex items-end gap-1 overflow-x-auto pb-1">
-            {days.map((d) => (
+            {days.map((d, i) => (
               <div key={d.date} className="flex min-w-[18px] flex-1 flex-col items-center">
                 <div className="flex h-32 w-full items-end justify-center gap-0.5">
                   <div
@@ -285,7 +390,7 @@ export default function AdminAnalyticsPage() {
                   />
                 </div>
                 <span className="mt-1.5 whitespace-nowrap text-[9px] text-stone-400">
-                  {new Date(d.date).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
+                  {i % dayLabelEvery === 0 ? new Date(d.date).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : ""}
                 </span>
               </div>
             ))}
@@ -293,13 +398,13 @@ export default function AdminAnalyticsPage() {
         )}
       </div>
 
-      <h3 className="mt-8 font-serif text-lg text-[#2D5A27]">
-        Period Totals — {range === "7d" ? "Last 7 days" : "Last 30 days"}
-      </h3>
+      <h3 className="mt-8 font-serif text-lg text-[#2D5A27]">Period Totals — {periodLabel}</h3>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {(["Palindan", "Uptown"] as const).map((branch) => {
           const t = totals[branch];
+          const pt = prevTotals[branch];
           const aov = t.orders > 0 ? t.revenue / t.orders : 0;
+          const prevAov = pt.orders > 0 ? pt.revenue / pt.orders : 0;
           return (
             <div key={branch} className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
               <h4 className="font-serif text-base text-[#2D5A27]">{branch}</h4>
@@ -307,14 +412,17 @@ export default function AdminAnalyticsPage() {
                 <div>
                   <p className="text-lg font-semibold text-[#2D5A27]">₱{t.revenue.toFixed(2)}</p>
                   <p className="text-xs text-stone-500">Revenue</p>
+                  <DeltaBadge delta={computeDelta(t.revenue, pt.revenue)} />
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-[#2D5A27]">{t.orders}</p>
                   <p className="text-xs text-stone-500">Orders</p>
+                  <DeltaBadge delta={computeDelta(t.orders, pt.orders)} />
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-[#2D5A27]">₱{aov.toFixed(2)}</p>
                   <p className="text-xs text-stone-500">Avg. order</p>
+                  <DeltaBadge delta={computeDelta(aov, prevAov)} />
                 </div>
               </div>
             </div>
@@ -323,9 +431,7 @@ export default function AdminAnalyticsPage() {
       </div>
 
       <div className="mt-10 flex items-center justify-between gap-3">
-        <h3 className="font-serif text-lg text-[#2D5A27]">
-          Best-Selling Items — {range === "7d" ? "Last 7 days" : "Last 30 days"}
-        </h3>
+        <h3 className="font-serif text-lg text-[#2D5A27]">Best-Selling Items — {periodLabel}</h3>
         <SectionDownloadButton section="items" label="Best-Selling Items" />
       </div>
       <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
@@ -369,9 +475,7 @@ export default function AdminAnalyticsPage() {
       </div>
 
       <div className="mt-10 flex items-center justify-between gap-3">
-        <h3 className="font-serif text-lg text-[#2D5A27]">
-          Busiest Hour of Day — {range === "7d" ? "Last 7 days" : "Last 30 days"}
-        </h3>
+        <h3 className="font-serif text-lg text-[#2D5A27]">Busiest Hour of Day — {periodLabel}</h3>
         <SectionDownloadButton section="hourly" label="Busiest Hour of Day" />
       </div>
       <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">

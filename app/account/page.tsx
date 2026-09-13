@@ -14,8 +14,19 @@ export default function AccountPage() {
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [location, setLocation] = useState("");
+  const [profileUpdatedAt, setProfileUpdatedAt] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+
+  const cooldownUntil = profileUpdatedAt
+    ? new Date(new Date(profileUpdatedAt).getTime() + 7 * 24 * 60 * 60 * 1000)
+    : null;
+  const inCooldown = !!cooldownUntil && cooldownUntil.getTime() > Date.now();
+  const cooldownDateLabel = cooldownUntil?.toLocaleDateString("en-PH", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -33,12 +44,13 @@ export default function AccountPage() {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, phone_number, location")
+        .select("full_name, phone_number, location, profile_updated_at")
         .eq("id", user.id)
         .single();
       setFullName(profile?.full_name ?? "");
       setPhoneNumber(profile?.phone_number ?? "");
       setLocation(profile?.location ?? "");
+      setProfileUpdatedAt(profile?.profile_updated_at ?? null);
       setLoading(false);
     }
     load();
@@ -60,9 +72,12 @@ export default function AccountPage() {
       .eq("id", user.id);
 
     setSavingProfile(false);
-    setProfileMessage(
-      error ? { type: "error", text: error.message } : { type: "ok", text: "Profile updated." }
-    );
+    if (error) {
+      setProfileMessage({ type: "error", text: error.message });
+    } else {
+      setProfileMessage({ type: "ok", text: "Profile updated." });
+      setProfileUpdatedAt(new Date().toISOString());
+    }
   }
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -107,37 +122,45 @@ export default function AccountPage() {
       <form onSubmit={handleSaveProfile} className="mt-8 flex flex-col gap-4">
         <h2 className="font-serif text-lg text-[#2D5A27]">Profile</h2>
 
-        <label className="flex flex-col gap-1.5 text-sm text-stone-700">
-          Full name
-          <input
-            required
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="input"
-          />
-        </label>
+        {inCooldown && (
+          <p className="rounded-xl bg-[#2D5A27]/10 px-4 py-3 text-sm text-[#2D5A27]">
+            You can update your profile again on {cooldownDateLabel}.
+          </p>
+        )}
 
-        <label className="flex flex-col gap-1.5 text-sm text-stone-700">
-          Phone number
-          <input
-            required
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            className="input"
-            placeholder="09XX XXX XXXX"
-          />
-        </label>
+        <fieldset disabled={inCooldown} className="flex flex-col gap-4 disabled:opacity-60">
+          <label className="flex flex-col gap-1.5 text-sm text-stone-700">
+            Full name
+            <input
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="input"
+            />
+          </label>
 
-        <label className="flex flex-col gap-1.5 text-sm text-stone-700">
-          Barangay
-          <input
-            required
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            className="input"
-            placeholder="e.g. Poblacion"
-          />
-        </label>
+          <label className="flex flex-col gap-1.5 text-sm text-stone-700">
+            Phone number
+            <input
+              required
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="input"
+              placeholder="09XX XXX XXXX"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5 text-sm text-stone-700">
+            Barangay
+            <input
+              required
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="input"
+              placeholder="e.g. Poblacion"
+            />
+          </label>
+        </fieldset>
 
         {profileMessage && (
           <p className={`text-sm ${profileMessage.type === "ok" ? "text-[#2D5A27]" : "text-red-600"}`}>
@@ -147,7 +170,7 @@ export default function AccountPage() {
 
         <button
           type="submit"
-          disabled={savingProfile}
+          disabled={savingProfile || inCooldown}
           className="mt-2 rounded-full bg-[#2D5A27] px-6 py-3 text-sm font-medium text-[#F9F6F0] disabled:opacity-60"
         >
           {savingProfile ? "Saving..." : "Save changes"}

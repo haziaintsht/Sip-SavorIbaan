@@ -138,16 +138,17 @@ const SECTION_TITLES: Record<ReportSection, string> = {
   barangay: "Customers by Barangay",
 };
 
+type BranchTotals = { Palindan: { revenue: number; orders: number }; Uptown: { revenue: number; orders: number } };
+
 export type AnalyticsReportData = {
-  range: "7d" | "30d";
+  periodLabel: string;
+  previousLabel: string;
   generatedAt: Date;
   logoSrc: string;
   sections?: ReportSection[];
   days: { date: string; Palindan: number; Uptown: number }[];
-  totals: {
-    Palindan: { revenue: number; orders: number };
-    Uptown: { revenue: number; orders: number };
-  };
+  totals: BranchTotals;
+  prevTotals: BranchTotals;
   topItems: { name: string; quantity: number; revenue: number }[];
   hourly: { hour: number; orders: number }[];
   barangays: { label: string; count: number }[];
@@ -155,26 +156,39 @@ export type AnalyticsReportData = {
 
 const ALL_SECTIONS: ReportSection[] = ["revenue", "items", "hourly", "barangay"];
 
+function combineTotals(t: BranchTotals) {
+  const revenue = t.Palindan.revenue + t.Uptown.revenue;
+  const orders = t.Palindan.orders + t.Uptown.orders;
+  return { revenue, orders };
+}
+
+function formatDelta(curr: number, prev: number): string | null {
+  if (prev === 0 && curr === 0) return null;
+  if (prev === 0) return "New";
+  const pct = ((curr - prev) / prev) * 100;
+  return `${pct >= 0 ? "+" : ""}${pct.toFixed(0)}%`;
+}
+
 export default function AnalyticsReportPdf({
-  range,
+  periodLabel,
+  previousLabel,
   generatedAt,
   logoSrc,
   sections = ALL_SECTIONS,
   days,
   totals,
+  prevTotals,
   topItems,
   hourly,
   barangays,
 }: AnalyticsReportData) {
-  const periodLabel = range === "7d" ? "Last 7 Days" : "Last 30 Days";
   const reportLabel = sections.length === 1 ? SECTION_TITLES[sections[0]] : "Analytics Report";
   const show = (s: ReportSection) => sections.includes(s);
 
-  const combined = {
-    revenue: totals.Palindan.revenue + totals.Uptown.revenue,
-    orders: totals.Palindan.orders + totals.Uptown.orders,
-  };
+  const combined = combineTotals(totals);
+  const prevCombined = combineTotals(prevTotals);
   const combinedAov = combined.orders > 0 ? combined.revenue / combined.orders : 0;
+  const revenueDelta = formatDelta(combined.revenue, prevCombined.revenue);
   const maxDay = Math.max(...days.map((d) => Math.max(d.Palindan, d.Uptown)), 0);
   const dayLabelEvery = days.length > 10 ? Math.ceil(days.length / 8) : 1;
 
@@ -279,6 +293,13 @@ export default function AnalyticsReportPdf({
                 {revenueRow("Uptown", totals.Uptown.revenue, totals.Uptown.orders, true)}
                 {revenueRow("Combined", combined.revenue, combined.orders, true, true)}
               </View>
+              {revenueDelta && (
+                <View style={[styles.calloutBox, { marginTop: 12, marginBottom: 0 }]}>
+                  <Text style={styles.calloutLabel}>Combined revenue:</Text>
+                  <Text style={styles.calloutValue}>{revenueDelta}</Text>
+                  <Text style={styles.calloutLabel}>vs. {previousLabel} (Php {prevCombined.revenue.toFixed(2)})</Text>
+                </View>
+              )}
             </>
           )}
 
