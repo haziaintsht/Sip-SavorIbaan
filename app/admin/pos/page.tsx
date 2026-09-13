@@ -326,6 +326,19 @@ export default function AdminPOSPage() {
   const cashReceivedNum = parseFloat(cashReceived) || 0;
   const changeDue = cashReceivedNum - total;
 
+  const MIN_PURCHASE_FOR_STAMP = 199;
+  const qualifiesForStamp = Math.round(total * 100) / 100 >= MIN_PURCHASE_FOR_STAMP;
+
+  // If the cart shrinks below the threshold after a customer's already
+  // attached (e.g. an item gets removed), drop them rather than silently
+  // keeping a customer selected who won't actually earn a stamp.
+  useEffect(() => {
+    if (selectedCustomer && !qualifiesForStamp) {
+      setSelectedCustomer(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qualifiesForStamp]);
+
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   async function searchCustomer(e?: React.FormEvent) {
@@ -421,6 +434,7 @@ export default function AdminPOSPage() {
         p_card_id: selectedCustomer.card_id,
         p_action: "ADD_STAMP",
         p_branch_location: `${branch} Branch`,
+        p_purchase_amount: total,
       });
       if (stampError) {
         setError(`Order saved, but the loyalty stamp failed: ${stampError.message}`);
@@ -978,7 +992,11 @@ export default function AdminPOSPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
               Customer (optional — adds a stamp)
             </p>
-            {selectedCustomer ? (
+            {!qualifiesForStamp ? (
+              <p className="mt-2 text-xs text-stone-500">
+                Orders under ₱{MIN_PURCHASE_FOR_STAMP} don&apos;t earn a stamp.
+              </p>
+            ) : selectedCustomer ? (
               <div className="mt-2 flex items-center justify-between rounded-xl bg-[#2D5A27]/5 px-3 py-2 text-sm">
                 <div>
                   <p className="font-medium text-stone-900">{selectedCustomer.full_name}</p>

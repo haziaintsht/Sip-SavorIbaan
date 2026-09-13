@@ -30,6 +30,7 @@ export default function ReviewSection({ userId, fullName }: { userId: string; fu
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
   const [review, setReview] = useState<Review | null>(null);
+  const [hasOrdered, setHasOrdered] = useState(false);
   const [editing, setEditing] = useState(false);
 
   const [branch, setBranch] = useState<"Palindan" | "Uptown" | "">("");
@@ -39,20 +40,19 @@ export default function ReviewSection({ userId, fullName }: { userId: string; fu
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
 
   useEffect(() => {
-    supabase
-      .from("reviews")
-      .select("id, branch, rating, body, status")
-      .eq("user_id", userId)
-      .maybeSingle()
-      .then(({ data }) => {
-        setReview(data ?? null);
-        if (data) {
-          setBranch(data.branch ?? "");
-          setRating(data.rating);
-          setBody(data.body);
-        }
-        setLoading(false);
-      });
+    Promise.all([
+      supabase.from("reviews").select("id, branch, rating, body, status").eq("user_id", userId).maybeSingle(),
+      supabase.from("orders").select("id").eq("customer_id", userId).eq("status", "completed").limit(1),
+    ]).then(([{ data }, { data: orderRows }]) => {
+      setReview(data ?? null);
+      if (data) {
+        setBranch(data.branch ?? "");
+        setRating(data.rating);
+        setBody(data.body);
+      }
+      setHasOrdered((orderRows?.length ?? 0) > 0);
+      setLoading(false);
+    });
   }, [supabase, userId]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -97,13 +97,19 @@ export default function ReviewSection({ userId, fullName }: { userId: string; fu
     );
   }
 
-  const showForm = editing || !review;
+  const showForm = review ? editing : hasOrdered;
 
   return (
     <section className="mt-10">
       <h2 className="font-serif text-lg text-[#2D5A27]">
         {review ? "Your review" : "Leave a review"}
       </h2>
+
+      {!review && !hasOrdered && (
+        <p className="mt-3 rounded-2xl border border-stone-200 bg-white p-5 text-sm text-stone-600">
+          Order something first, then come back to tell us how it went!
+        </p>
+      )}
 
       {!showForm && review && (
         <div className="mt-3 rounded-2xl border border-stone-200 bg-white p-5">
