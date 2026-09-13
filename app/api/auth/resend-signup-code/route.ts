@@ -20,16 +20,17 @@ export async function POST(request: Request) {
   }
 
   const code = generateCode();
+  const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000);
   await admin.from("email_verification_codes").insert({
     email,
     code_hash: hashCode(code),
     purpose: "signup",
     user_id: user.id,
-    expires_at: new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000).toISOString(),
+    expires_at: expiresAt.toISOString(),
   });
 
   try {
-    await sendSignupCode(email, code);
+    await sendSignupCode(email, code, expiresAt);
   } catch {
     return NextResponse.json({ error: "The email failed to send. Please try again." }, { status: 500 });
   }

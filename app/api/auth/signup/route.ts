@@ -30,12 +30,13 @@ export async function POST(request: Request) {
   }
 
   const code = generateCode();
+  const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000);
   const { error: codeError } = await admin.from("email_verification_codes").insert({
     email,
     code_hash: hashCode(code),
     purpose: "signup",
     user_id: data.user.id,
-    expires_at: new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000).toISOString(),
+    expires_at: expiresAt.toISOString(),
   });
 
   if (codeError) {
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await sendSignupCode(email, code);
+    await sendSignupCode(email, code, expiresAt);
   } catch {
     return NextResponse.json(
       { error: "Account created but the email failed to send. Try resending the code." },

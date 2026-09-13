@@ -20,16 +20,17 @@ export async function POST(request: Request) {
   }
 
   const code = generateCode();
+  const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000);
   await admin.from("email_verification_codes").insert({
     email,
     code_hash: hashCode(code),
     purpose: "reset",
     user_id: user.id,
-    expires_at: new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000).toISOString(),
+    expires_at: expiresAt.toISOString(),
   });
 
   try {
-    await sendResetCode(email, code);
+    await sendResetCode(email, code, expiresAt);
   } catch {
     // Still respond ok — don't leak whether the account exists via a
     // different error path, and the user can just request another code.
