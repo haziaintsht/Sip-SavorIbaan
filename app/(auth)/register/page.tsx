@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -97,12 +98,12 @@ export default function RegisterPage() {
         </Field>
 
         <Field label="Password">
-          <input
+          <PasswordInput
             required
             minLength={8}
-            type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={setPassword}
+            autoComplete="new-password"
             className="input"
           />
         </Field>

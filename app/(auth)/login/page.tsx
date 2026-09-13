@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { setRememberPreference } from "@/lib/rememberMe";
 import SignInOverlay from "@/components/SignInOverlay";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,10 +20,11 @@ export default function LoginPage() {
   const [overlayPhase, setOverlayPhase] = useState<"loading" | "success" | null>(null);
   const [error, setError] = useState<string | null>(
     searchParams.get("error") === "verification_failed"
-      ? "That verification link is invalid or expired. Please sign up again or request a new one."
+      ? "That link is invalid or expired. Please request a new one."
       : null
   );
   const justVerified = searchParams.get("verified") === "1";
+  const justReset = searchParams.get("reset") === "1";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -79,6 +82,12 @@ export default function LoginPage() {
         </p>
       )}
 
+      {justReset && (
+        <p className="mt-4 rounded-xl bg-[#2D5A27]/10 px-4 py-3 text-sm text-[#2D5A27]">
+          Password updated — you can now log in with your new password.
+        </p>
+      )}
+
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm text-stone-700">
           Email
@@ -93,24 +102,29 @@ export default function LoginPage() {
 
         <label className="flex flex-col gap-1.5 text-sm text-stone-700">
           Password
-          <input
+          <PasswordInput
             required
-            type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={setPassword}
+            autoComplete="current-password"
             className="input"
           />
         </label>
 
-        <label className="flex items-center gap-2 text-sm text-stone-700">
-          <input
-            type="checkbox"
-            checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 rounded border-stone-300 text-[#2D5A27] focus:ring-[#2D5A27]"
-          />
-          Remember me
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 text-sm text-stone-700">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 rounded border-stone-300 text-[#2D5A27] focus:ring-[#2D5A27]"
+            />
+            Remember me
+          </label>
+          <Link href="/forgot-password" className="text-sm text-[#2D5A27] hover:underline">
+            Forgot password?
+          </Link>
+        </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
