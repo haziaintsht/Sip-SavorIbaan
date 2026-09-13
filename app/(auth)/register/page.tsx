@@ -3,12 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import PasswordInput from "@/components/PasswordInput";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,24 +22,17 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        // Supabase sends a verification email; clicking it hits /auth/callback
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: {
-          full_name: fullName,
-          phone_number: phoneNumber,
-          location,
-        },
-      },
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fullName, email, phoneNumber, location, password }),
     });
+    const body = await res.json().catch(() => ({}));
 
     setLoading(false);
 
-    if (signUpError) {
-      setError(signUpError.message);
+    if (!res.ok) {
+      setError(body.error ?? "Failed to create account");
       return;
     }
 

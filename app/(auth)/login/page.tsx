@@ -18,11 +18,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [overlayPhase, setOverlayPhase] = useState<"loading" | "success" | null>(null);
-  const [error, setError] = useState<string | null>(
-    searchParams.get("error") === "verification_failed"
-      ? "That link is invalid or expired. Please request a new one."
-      : null
-  );
+  const [error, setError] = useState<string | null>(null);
   const justVerified = searchParams.get("verified") === "1";
   const justReset = searchParams.get("reset") === "1";
 

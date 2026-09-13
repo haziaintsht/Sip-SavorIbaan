@@ -3,12 +3,10 @@
 import { useState } from "react";
 import { Mail } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
   const email = searchParams.get("email") ?? "";
 
   const [code, setCode] = useState("");
@@ -22,33 +20,34 @@ export default function VerifyEmailPage() {
     setError(null);
     setResent(false);
 
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      email,
-      token: code.trim(),
-      type: "signup",
+    const res = await fetch("/api/auth/verify-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code: code.trim() }),
     });
+    const body = await res.json().catch(() => ({}));
 
     setLoading(false);
 
-    if (verifyError) {
-      setError(
-        verifyError.message.includes("expired") || verifyError.message.includes("invalid")
-          ? "That code is invalid or expired. Request a new one below."
-          : verifyError.message
-      );
+    if (!res.ok) {
+      setError(body.error ?? "That code is invalid or expired. Request a new one below.");
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    router.push("/login?verified=1");
   }
 
   async function handleResend() {
     setError(null);
     setResent(false);
-    const { error: resendError } = await supabase.auth.resend({ type: "signup", email });
-    if (resendError) {
-      setError(resendError.message);
+    const res = await fetch("/api/auth/resend-signup-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Failed to resend code");
       return;
     }
     setResent(true);
