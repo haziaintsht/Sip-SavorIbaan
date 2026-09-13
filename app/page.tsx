@@ -51,6 +51,15 @@ const testimonials = [
   },
 ];
 
+// Keeps the first letter of each name part, dots out the rest — reads as
+// anonymized without losing the sense of a real local name.
+function redactName(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0] + ".".repeat(part.length - 1))
+    .join(" ");
+}
+
 const steps = [
   { n: "01", title: "Join loyalty", desc: "Sign up in seconds and verify your email — your digital stamp card is ready instantly." },
   { n: "02", title: "Show your QR", desc: "Pull up your dashboard QR code at the counter with every order." },
@@ -302,7 +311,7 @@ export default async function HomePage() {
               <Reveal key={i} delay={i * 0.1}>
                 <div className="rounded-2xl border border-[#2D5A27]/15 bg-white p-6 shadow-sm">
                   <p className="text-sm italic text-stone-600">&quot;{t.quote}&quot;</p>
-                  <p className="mt-4 text-sm font-medium text-[#2D5A27]">{t.name}</p>
+                  <p className="mt-4 text-sm font-medium text-[#2D5A27]">{redactName(t.name)}</p>
                   <p className="text-xs text-stone-500">{t.branch}</p>
                 </div>
               </Reveal>
