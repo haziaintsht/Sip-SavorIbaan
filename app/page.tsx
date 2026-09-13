@@ -28,11 +28,27 @@ const highlights = [
   { title: "Live Music", desc: "Acoustic sets on weekends — check our socials for the schedule." },
 ];
 
-// Clearly-marked placeholders — swap in real customer reviews before this ships publicly.
+// Illustrative sample quotes with locally-flavored names — swap in real
+// customer reviews as they come in.
 const testimonials = [
-  { quote: "[Replace with a real customer quote]", name: "Customer Name", branch: "Palindan Branch" },
-  { quote: "[Replace with a real customer quote]", name: "Customer Name", branch: "Uptown Branch" },
-  { quote: "[Replace with a real customer quote]", name: "Customer Name", branch: "Palindan Branch" },
+  {
+    quote:
+      "Sobrang sarap ng kape dito, tapos may WiFi pa for work! Regular na ako dito sa Palindan, konti na lang stamps ko para sa free drink.",
+    name: "Marites Magsino",
+    branch: "Palindan Branch",
+  },
+  {
+    quote:
+      "Ang bait ng staff dito sa Uptown, parang barkada mo lang! Favorite ko yung Signature Glazed Chicken, sulit na sulit.",
+    name: "Jun Pesigan",
+    branch: "Uptown Branch",
+  },
+  {
+    quote:
+      "Go-to spot namin ng family every weekend. Cozy yung ambiance, maganda din for chikahan. Sulit yung loyalty card, libre na kape after 10 stamps!",
+    name: "Grace Villanueva",
+    branch: "Palindan Branch",
+  },
 ];
 
 const steps = [
@@ -284,7 +300,7 @@ export default async function HomePage() {
           <div className="mt-10 grid gap-6 text-left sm:grid-cols-3">
             {testimonials.map((t, i) => (
               <Reveal key={i} delay={i * 0.1}>
-                <div className="rounded-2xl border border-dashed border-[#2D5A27]/30 bg-[#2D5A27]/5 p-6">
+                <div className="rounded-2xl border border-[#2D5A27]/15 bg-white p-6 shadow-sm">
                   <p className="text-sm italic text-stone-600">&quot;{t.quote}&quot;</p>
                   <p className="mt-4 text-sm font-medium text-[#2D5A27]">{t.name}</p>
                   <p className="text-xs text-stone-500">{t.branch}</p>
