@@ -1,0 +1,16 @@
+-- BUG FIX: migration 027 added a 4th parameter (p_purchase_amount) to
+-- stamp_action via `create or replace function`. Postgres only replaces a
+-- function in place when the parameter *signature* is unchanged — adding a
+-- parameter changes the signature, so 027 actually created a SECOND,
+-- separate overload rather than replacing the original. Both
+-- stamp_action(uuid, text, text) and stamp_action(uuid, text, text, numeric)
+-- have existed side by side ever since, so any call that omits
+-- p_purchase_amount (Redeem Reward, Add/Remove Stamp from /admin/stamps,
+-- and Remove Stamp from the POS) fails with "Could not choose the best
+-- candidate function" — Postgres can't tell which overload to use.
+--
+-- Dropping the stale 3-parameter version leaves the 4-parameter one (from
+-- 027) as the only stamp_action, so every existing call site resolves
+-- unambiguously — callers that don't pass p_purchase_amount simply get its
+-- default of null, exactly as before 027 ever existed.
+drop function if exists public.stamp_action(uuid, text, text);
